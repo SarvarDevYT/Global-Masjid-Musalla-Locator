@@ -154,3 +154,6 @@ class MosquesListNotifier extends AsyncNotifier<List<MosqueModel>> {
     }
   }
 }
+
+// Active Bottom Navigation Tab index provider (0: Home, 1: Map, 2: Qibla, 3: Settings)
+final currentTabProvider = StateProvider<int>((ref) => 0);

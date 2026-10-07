@@ -46,6 +46,14 @@ class MosqueModel {
   bool get isMasjid => type.toLowerCase() == 'masjid';
   bool get isMusalla => type.toLowerCase() == 'musalla';
 
+  String get formattedDistance {
+    if (distanceMeters == null) return 'Yaqin';
+    if (distanceMeters! < 1000) {
+      return '${distanceMeters!.round()} m';
+    }
+    return '${(distanceMeters! / 1000).toStringAsFixed(1)} km';
+  }
+
   MosqueModel copyWith({
     String? id,
     int? osmId,
