@@ -7,16 +7,19 @@ const config = require('../config');
 class StorageService {
   constructor() {
     this.s3Client = null;
-    this.bucketName = process.env.S3_BUCKET_NAME || 'uploads';
-    this.endpoint = process.env.S3_ENDPOINT;
+    this.endpoint = process.env.AWS_ENDPOINT_URL_S3 || process.env.S3_ENDPOINT;
+    this.bucketName = process.env.S3_BUCKET || process.env.S3_BUCKET_NAME || 'uploads';
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || process.env.S3_SECRET_ACCESS_KEY;
+    const region = process.env.AWS_REGION || process.env.S3_REGION || 'eu-central-1';
 
-    if (this.endpoint && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+    if (this.endpoint && accessKeyId && secretAccessKey) {
       this.s3Client = new S3Client({
-        region: process.env.S3_REGION || 'eu-central-1',
+        region: region,
         endpoint: this.endpoint,
         credentials: {
-          accessKeyId: process.env.S3_ACCESS_KEY_ID,
-          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY
+          accessKeyId: accessKeyId,
+          secretAccessKey: secretAccessKey
         },
         forcePathStyle: true
       });
@@ -47,8 +50,7 @@ class StorageService {
         Bucket: this.bucketName,
         Key: `mosques/${filename}`,
         Body: fileBuffer,
-        ContentType: mimeType,
-        ACL: 'public-read'
+        ContentType: mimeType
       });
 
       await this.s3Client.send(command);
