@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/l10n/app_translations.dart';
 import '../widgets/navigation_dialog.dart';
@@ -180,7 +179,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
-    final userLocationAsync = ref.watch(userLocationProvider);
     final mosquesAsync = ref.watch(mosquesListProvider);
     final filters = ref.watch(filtersProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -217,31 +215,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: const Icon(Icons.mosque, color: AppColors.goldLight, size: 22),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppTranslations.get('app_title', locale),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  ),
-                ),
-                const Text(
-                  'بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.gold,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
+            Text(
+              AppTranslations.get('app_title', locale),
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            icon: _isLocating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLight),
+                  )
+                : const Icon(Icons.radar, color: AppColors.primaryLight),
+            tooltip: _cooldownRemainingMinutes > 0
+                ? 'Kutish: $_cooldownRemainingMinutes daq'
+                : 'Yaqin masjidlarni skanerlash',
+            onPressed: _isLocating ? null : _detectNearbyMosques,
+          ),
           IconButton(
             icon: const Icon(Icons.add_location_alt, color: AppColors.primaryLight),
             tooltip: AppTranslations.get('add_mosque', locale),
@@ -261,12 +258,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
-            // 1. LOCATION & GPS STATUS CARD
-            _buildLocationStatusCard(context, userLocationAsync, isDark),
-
-            const SizedBox(height: 18),
-
-            // 2. QUICK SERVICES (4 Cards: Qibla, Map, Add Mosque, Settings)
+            // 1. QUICK SERVICES (4 Cards: Qibla, Map, Add Mosque, Settings)
             Text(
               'Asosiy Xizmatlar',
               style: TextStyle(
@@ -348,185 +340,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 30),
           ],
         ),
-      ),
-    );
-  }
-
-  // Location Card
-  Widget _buildLocationStatusCard(
-    BuildContext context,
-    AsyncValue<LatLng> userLocAsync,
-    bool isDark,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: isDark ? AppColors.cardGradientDark : AppColors.cardGradientLight,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark
-              ? AppColors.gold.withValues(alpha: 0.35)
-              : AppColors.primary.withValues(alpha: 0.25),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isDark ? AppColors.primary : AppColors.gold).withValues(alpha: 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: AppColors.emeraldGradient,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.gold, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-                child: _isLocating
-                    ? const Padding(
-                        padding: EdgeInsets.all(13),
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.goldLight),
-                      )
-                    : const Icon(Icons.my_location, color: AppColors.goldLight, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: userLocAsync.hasValue ? AppColors.success : AppColors.warning,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: userLocAsync.hasValue ? AppColors.success : AppColors.warning,
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Sizning Joylashuvingiz',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    userLocAsync.when(
-                      data: (pos) => Text(
-                        'GPS: ${pos.latitude.toStringAsFixed(4)}°, ${pos.longitude.toStringAsFixed(4)}°',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        ),
-                      ),
-                      loading: () => Text(
-                        'GPS aniqlanmoqda...',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                      error: (_, __) => const Text(
-                        'Standart hudud faol',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh, color: AppColors.gold),
-                tooltip: 'Joylashuvni yangilash',
-                onPressed: _isLocating ? null : _detectNearbyMosques,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Big prominent "Atrofdagi Masjidlarni Aniqlash" button
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: AppColors.emeraldGradient,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.gold.withValues(alpha: 0.6), width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.4),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: _isLocating ? null : _detectNearbyMosques,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _isLocating
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.goldLight),
-                            )
-                          : const Icon(Icons.radar, color: AppColors.goldLight, size: 22),
-                      const SizedBox(width: 10),
-                      Flexible(
-                        child: Text(
-                          _isLocating
-                              ? 'Masjidlar skanerlanmoqda...'
-                              : (_cooldownRemainingMinutes > 0
-                                  ? '📍 Yaqin Masjidlar (Kutish: $_cooldownRemainingMinutes daq)'
-                                  : '📍 Yaqin Atrofdagi Masjidlarni Skanerlash'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.2,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
