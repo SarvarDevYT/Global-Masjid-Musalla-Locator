@@ -38,16 +38,17 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && data['data'] is List) {
-          return (data['data'] as List)
+          final list = (data['data'] as List)
               .map((item) => MosqueModel.fromJson(item))
               .toList();
+          if (list.isNotEmpty) return list;
         }
       }
     } catch (_) {
-      // Backend not running or offline: fallback to direct Overpass query
+      // Backend not reached or offline: fallback to direct Overpass query
     }
 
-    // Direct OpenStreetMap Overpass Fallback
+    // Direct OpenStreetMap Overpass Fallback for instant worldwide operation
     return await _fetchFromOverpass(lat: lat, lng: lng, radiusMeters: radiusMeters);
   }
 
@@ -63,15 +64,18 @@ class ApiService {
         node["amenity"="place_of_worship"]["religion"="muslim"](around:$safeRadius,$lat,$lng);
         way["amenity"="place_of_worship"]["religion"="muslim"](around:$safeRadius,$lat,$lng);
       );
-      out center tags 30;
+      out center tags 40;
     ''';
 
     try {
       final response = await _client.post(
         Uri.parse(ApiConstants.overpassUrl),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'MasjidLocator/1.0 (com.masjidlocator.masjid_locator)',
+        },
         body: 'data=${Uri.encodeComponent(overpassQuery)}',
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

@@ -1,6 +1,6 @@
 class ApiConstants {
-  // Local backend server (Use 10.0.2.2 for Android Emulator, localhost for iOS/Web/Desktop)
-  static const String defaultBaseUrl = 'http://127.0.0.1:3000/api/v1';
+  // Live cloud backend on Vercel with Neon PostgreSQL + PostGIS
+  static const String defaultBaseUrl = 'https://global-masjid-musalla-locator.vercel.app/api/v1';
   
   // Public Overpass API fallback for instant worldwide operation without backend
   static const String overpassUrl = 'https://overpass-api.de/api/interpreter';

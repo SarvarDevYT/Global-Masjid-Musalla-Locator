@@ -56,12 +56,31 @@ class LocationService {
         );
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
+      Position? position;
+      try {
+        position = await Geolocator.getLastKnownPosition();
+      } catch (_) {}
+
+      try {
+        final current = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 6),
+          ),
+        );
+        position = current;
+      } catch (_) {
+        // If high accuracy times out, keep lastKnownPosition
+      }
+
+      if (position == null) {
+        return LocationResult(
+          lat: defaultLat,
+          lng: defaultLng,
+          isDefaultFallback: true,
+          errorMessage: 'Could not obtain GPS position.',
+        );
+      }
 
       return LocationResult(
         lat: position.latitude,

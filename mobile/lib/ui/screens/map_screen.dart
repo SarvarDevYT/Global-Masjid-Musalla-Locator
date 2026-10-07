@@ -53,14 +53,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  void _recenterToUser() {
+  Future<void> _recenterToUser() async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('📍 Joylashuvingiz va yaqin masjidlar aniqlanmoqda...'),
+        duration: Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+
+    await ref.read(userLocationProvider.notifier).refreshLocation();
     final userLoc = ref.read(userLocationProvider).value;
     if (userLoc != null) {
       _mapController.move(userLoc, 15.0);
-      ref.read(mosquesListProvider.notifier).searchInCustomArea(userLoc);
+      await ref.read(mosquesListProvider.notifier).searchInCustomArea(userLoc);
       setState(() => _showSearchAreaButton = false);
-    } else {
-      ref.read(userLocationProvider.notifier).refreshLocation();
+      if (mounted) {
+        final count = ref.read(mosquesListProvider).value?.length ?? 0;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ $count ta yaqin masjid ko\'rsatildi'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: const Color(0xFF059669),
+          ),
+        );
+      }
     }
   }
 
