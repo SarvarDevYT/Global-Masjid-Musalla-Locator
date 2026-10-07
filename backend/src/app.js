@@ -5,6 +5,8 @@ const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const mosquesRouter = require('./routes/mosques');
 const syncRouter = require('./routes/sync');
+const uploadRouter = require('./routes/upload');
+const path = require('path');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 const { dbManager } = require('./db/database');
 
@@ -19,6 +21,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Serve static uploads locally if fallback is active
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Rate limiting (300 requests per 15 minutes by default)
 const limiter = rateLimit({
@@ -50,6 +55,7 @@ app.get(`${config.apiPrefix}/health`, (req, res) => {
 // Main API Routes
 app.use(`${config.apiPrefix}/mosques`, mosquesRouter);
 app.use(`${config.apiPrefix}/sync`, syncRouter);
+app.use(`${config.apiPrefix}/upload`, uploadRouter);
 
 // 404 & Global Error Handling
 app.use(notFoundHandler);
