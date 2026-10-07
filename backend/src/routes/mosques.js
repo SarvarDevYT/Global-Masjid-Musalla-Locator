@@ -1,5 +1,6 @@
 const express = require('express');
 const { dbManager } = require('../db/database');
+const overpassService = require('../services/overpassService');
 const {
   idParamSchema,
   nearbyQuerySchema,
@@ -31,7 +32,7 @@ router.get('/nearby', validate(nearbyQuerySchema, 'query'), async (req, res, nex
       offset
     } = req.validated;
 
-    const mosques = await dbManager.findNearby({
+    let mosques = await dbManager.findNearby({
       lat,
       lng,
       radiusMeters: radius,
@@ -48,6 +49,16 @@ router.get('/nearby', validate(nearbyQuerySchema, 'query'), async (req, res, nex
       limit,
       offset
     });
+
+    // If database returned 0 mosques in radius, fallback to live Overpass API
+    if (mosques.length === 0 && !q) {
+      try {
+        const liveElements = await overpassService.fetchNearby(lat, lng, radius);
+        if (liveElements && liveElements.length > 0) {
+          mosques = liveElements.slice(0, limit);
+        }
+      } catch (_) {}
+    }
 
     res.json({ success: true, count: mosques.length, data: mosques });
   } catch (err) {

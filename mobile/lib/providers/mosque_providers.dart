@@ -114,7 +114,11 @@ class MosquesListNotifier extends AsyncNotifier<List<MosqueModel>> {
     final filters = ref.watch(filtersProvider);
     final repo = ref.watch(mosqueRepositoryProvider);
 
-    final LatLng center = locationAsync.value ?? const LatLng(41.3381, 69.2415);
+    LatLng? center = locationAsync.value;
+    if (center == null) {
+      final loc = await LocationService.getCurrentLocation();
+      center = LatLng(loc.lat, loc.lng);
+    }
 
     return await repo.getNearbyMosques(
       userLat: center.latitude,

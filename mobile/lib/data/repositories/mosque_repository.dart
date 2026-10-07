@@ -10,128 +10,6 @@ class MosqueRepository {
 
   MosqueRepository({ApiService? apiService}) : _apiService = apiService ?? ApiService();
 
-  // Built-in offline seeds
-  static final List<MosqueModel> _defaultSeeds = [
-    const MosqueModel(
-      id: 'seed-1',
-      name: 'Hazrati Imom (Hastimom) Masjidi',
-      altName: 'Hazrat Imam Mosque',
-      address: 'Qorasaroy ko\'chasi, Olmazor tumani, Toshkent',
-      city: 'Toshkent',
-      country: 'O\'zbekiston',
-      type: 'masjid',
-      lat: 41.3381,
-      lng: 69.2415,
-      hasWuduMen: true,
-      hasWuduWomen: true,
-      hasWomenPrayerArea: true,
-      hasJuma: true,
-      hasWheelchairAccess: true,
-      hasParking: true,
-      photoUrl: 'https://images.unsplash.com/photo-1590076212455-83e9ea43a18e?w=800',
-      status: 'approved',
-      verifiedCount: 48,
-    ),
-    const MosqueModel(
-      id: 'seed-2',
-      name: 'Minor Masjidi',
-      altName: 'Minor Mosque',
-      address: 'Kichik halqa yo\'li, Yunusobod tumani, Toshkent',
-      city: 'Toshkent',
-      country: 'O\'zbekiston',
-      type: 'masjid',
-      lat: 41.3283,
-      lng: 69.2817,
-      hasWuduMen: true,
-      hasWuduWomen: true,
-      hasWomenPrayerArea: true,
-      hasJuma: true,
-      hasWheelchairAccess: true,
-      hasParking: true,
-      photoUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800',
-      status: 'approved',
-      verifiedCount: 52,
-    ),
-    const MosqueModel(
-      id: 'seed-3',
-      name: 'Shayx Zayniddin (Ko\'kcha) Masjidi',
-      altName: 'Kukcha Mosque',
-      address: 'Ko\'kcha Darvoza ko\'chasi, Shayxontohur tumani, Toshkent',
-      city: 'Toshkent',
-      country: 'O\'zbekiston',
-      type: 'masjid',
-      lat: 41.3214,
-      lng: 69.2141,
-      hasWuduMen: true,
-      hasWuduWomen: true,
-      hasWomenPrayerArea: true,
-      hasJuma: true,
-      hasWheelchairAccess: true,
-      hasParking: true,
-      photoUrl: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800',
-      status: 'approved',
-      verifiedCount: 40,
-    ),
-    const MosqueModel(
-      id: 'seed-4',
-      name: 'Tashkent City Mall Musalla',
-      altName: 'Shopping Center Prayer Room',
-      address: 'Botir Zokirov ko\'chasi, Tashkent City, Toshkent',
-      city: 'Toshkent',
-      country: 'O\'zbekiston',
-      type: 'musalla',
-      lat: 41.3115,
-      lng: 69.2530,
-      hasWuduMen: true,
-      hasWuduWomen: true,
-      hasWomenPrayerArea: true,
-      hasJuma: false,
-      hasWheelchairAccess: true,
-      hasParking: true,
-      photoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
-      status: 'approved',
-      verifiedCount: 22,
-    ),
-    const MosqueModel(
-      id: 'seed-5',
-      name: 'Al-Masjid an-Nabawi',
-      altName: 'Prophet\'s Mosque',
-      address: 'Al Haram, Medina 42311, Saudi Arabia',
-      city: 'Medina',
-      country: 'Saudi Arabia',
-      type: 'masjid',
-      lat: 24.4672,
-      lng: 39.6111,
-      hasWuduMen: true,
-      hasWuduWomen: true,
-      hasWomenPrayerArea: true,
-      hasJuma: true,
-      hasWheelchairAccess: true,
-      hasParking: true,
-      status: 'approved',
-      verifiedCount: 500,
-    ),
-    const MosqueModel(
-      id: 'seed-6',
-      name: 'Al-Masjid al-Haram',
-      altName: 'The Sacred Mosque',
-      address: 'Al Haram, Mecca 24231, Saudi Arabia',
-      city: 'Mecca',
-      country: 'Saudi Arabia',
-      type: 'masjid',
-      lat: 21.4225,
-      lng: 39.8262,
-      hasWuduMen: true,
-      hasWuduWomen: true,
-      hasWomenPrayerArea: true,
-      hasJuma: true,
-      hasWheelchairAccess: true,
-      hasParking: true,
-      status: 'approved',
-      verifiedCount: 1000,
-    ),
-  ];
-
   Future<List<MosqueModel>> getNearbyMosques({
     required double userLat,
     required double userLng,
@@ -146,7 +24,7 @@ class MosqueRepository {
   }) async {
     List<MosqueModel> results = [];
 
-    // 1. Try fetching from network (Backend or Overpass API)
+    // 1. Try fetching from network (Live Backend with 2300+ Uzbekistan Mosques or Overpass API)
     try {
       results = await _apiService.fetchNearbyMosques(
         lat: userLat,
@@ -169,10 +47,10 @@ class MosqueRepository {
       // Network failed
     }
 
-    // 2. If network returned nothing (or offline), load from cache & defaults
+    // 2. If network returned nothing (or offline), load from cache
     if (results.isEmpty) {
       final cached = await _loadFromCache();
-      results = cached.isNotEmpty ? cached : _defaultSeeds;
+      results = cached;
     }
 
     // 3. Compute distance from current user coordinates and sort ascending

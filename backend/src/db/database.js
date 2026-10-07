@@ -21,7 +21,10 @@ class DatabaseManager {
   constructor() {
     this.isPostgresConnected = false;
     this.pool = null;
-    this.memoryMosques = [...SEED_MOSQUES];
+    this.memoryMosques = SEED_MOSQUES.map(m => ({
+      id: m.id || `osm-${m.osm_id}`,
+      ...m
+    }));
     this.memoryReports = [];
   }
 
@@ -95,16 +98,16 @@ class DatabaseManager {
               location, has_wudu_men, has_wudu_women, has_women_prayer_area,
               has_juma, has_wheelchair_access, has_parking, photo_url, status, verified_count
             ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8,
-              ST_SetSRID(ST_MakePoint($9, $10), 4326),
-              $11, $12, $13, $14, $15, $16, $17, $18, $19
-            ) ON CONFLICT (id) DO NOTHING`,
+              gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7,
+              ST_SetSRID(ST_MakePoint($8, $9), 4326),
+              $10, $11, $12, $13, $14, $15, $16, $17, $18
+            ) ON CONFLICT (osm_id) DO NOTHING`,
             [
-              m.id, m.osm_id, m.name, m.alt_name, m.address, m.city, m.country, m.type,
+              m.osm_id, m.name, m.alt_name, m.address, m.city, m.country, m.type,
               m.lng, m.lat,
               m.has_wudu_men, m.has_wudu_women, m.has_women_prayer_area,
               m.has_juma, m.has_wheelchair_access, m.has_parking,
-              m.photo_url, m.status, m.verified_count
+              m.photo_url, m.status || 'approved', m.verified_count || 1
             ]
           );
         }

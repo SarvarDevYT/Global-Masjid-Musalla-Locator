@@ -34,7 +34,7 @@ class ApiService {
     final uri = Uri.parse('${ApiConstants.defaultBaseUrl}/mosques/nearby').replace(queryParameters: queryParams);
 
     try {
-      final response = await _client.get(uri).timeout(const Duration(seconds: 4));
+      final response = await _client.get(uri).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && data['data'] is List) {
