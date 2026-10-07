@@ -55,22 +55,14 @@ class _MapWidgetState extends State<MapWidget> {
         },
       ),
       children: [
-        // 100% Free, Global, Keyless OpenStreetMap Tiles (No API key needed, no watermarks)
+        // Ultra-fast Global CARTO Basemaps with Official API Key (No watermarks)
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: isDark
+              ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_4d65_1_69dcf6f563a545ed10f0044e'
+              : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4d65_1_69dcf6f563a545ed10f0044e',
+          subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.masjidlocator.masjid_locator',
           maxZoom: 19,
-          tileBuilder: isDark
-              ? (context, tileWidget, tile) => ColorFiltered(
-                  colorFilter: const ColorFilter.matrix(<double>[
-                    -0.2126, -0.7152, -0.0722, 0, 255,
-                    -0.2126, -0.7152, -0.0722, 0, 255,
-                    -0.2126, -0.7152, -0.0722, 0, 255,
-                    0, 0, 0, 1, 0,
-                  ]),
-                  child: tileWidget,
-                )
-              : null,
         ),
 
         // Mosque Markers
