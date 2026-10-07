@@ -4,6 +4,7 @@ const overpassService = require('../services/overpassService');
 const {
   idParamSchema,
   nearbyQuerySchema,
+  scanSyncSchema,
   contributeSchema,
   reportSchema,
   validate
@@ -50,17 +51,55 @@ router.get('/nearby', validate(nearbyQuerySchema, 'query'), async (req, res, nex
       offset
     });
 
-    // If database returned 0 mosques in radius, fallback to live Overpass API
+    // If database returned 0 mosques in radius, fallback to live Overpass API and auto-ingest
     if (mosques.length === 0 && !q) {
       try {
         const liveElements = await overpassService.fetchNearby(lat, lng, radius);
         if (liveElements && liveElements.length > 0) {
+          await dbManager.upsertOsmMosques(liveElements);
           mosques = liveElements.slice(0, limit);
         }
       } catch (_) {}
     }
 
     res.json({ success: true, count: mosques.length, data: mosques });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/v1/mosques/scan-and-sync
+ * Foydalanuvchi atrofdagi yangi masjidlarni skanerlaydi va bazada bo'lmasa avtomatik kiritadi
+ */
+router.post('/scan-and-sync', validate(scanSyncSchema, 'body'), async (req, res, next) => {
+  try {
+    const { lat, lng, radius } = req.validated;
+
+    // 1. Overpass orqali hududdagi jonli obyektlarni qidirish
+    const liveElements = await overpassService.fetchNearby(lat, lng, radius);
+
+    // 2. Yangi masjidlar bo'lsa, bazaga avtomatik kiritish
+    let newlyAddedCount = 0;
+    if (liveElements && liveElements.length > 0) {
+      newlyAddedCount = await dbManager.upsertOsmMosques(liveElements);
+    }
+
+    // 3. Masofa bo'yicha saralangan eng yaqin masjidlarni qaytarish
+    const mosques = await dbManager.findNearby({
+      lat,
+      lng,
+      radiusMeters: radius,
+      status: 'approved',
+      limit: 50
+    });
+
+    res.json({
+      success: true,
+      newly_added_count: newlyAddedCount,
+      count: mosques.length,
+      data: mosques
+    });
   } catch (err) {
     next(err);
   }

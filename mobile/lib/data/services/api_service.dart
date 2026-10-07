@@ -3,8 +3,48 @@ import 'package:http/http.dart' as http;
 import '../models/mosque_model.dart';
 import '../../core/constants/api_constants.dart';
 
+class ScanResult {
+  final List<MosqueModel> mosques;
+  final int newlyAddedCount;
+  const ScanResult({required this.mosques, required this.newlyAddedCount});
+}
+
 class ApiService {
   final http.Client _client = http.Client();
+
+  /// Skanerlash va yangi topilgan masjidlarni bazaga kiritish
+  Future<ScanResult> scanAndSyncNearby({
+    required double lat,
+    required double lng,
+    double radiusMeters = 15000,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.defaultBaseUrl}/mosques/scan-and-sync');
+    try {
+      final response = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'lat': lat,
+          'lng': lng,
+          'radius': radiusMeters.round(),
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          final list = (data['data'] as List)
+              .map((item) => MosqueModel.fromJson(item))
+              .toList();
+          final newlyAdded = (data['newly_added_count'] as num?)?.toInt() ?? 0;
+          return ScanResult(mosques: list, newlyAddedCount: newlyAdded);
+        }
+      }
+    } catch (_) {}
+
+    final fallbackList = await fetchNearbyMosques(lat: lat, lng: lng, radiusMeters: radiusMeters);
+    return ScanResult(mosques: fallbackList, newlyAddedCount: 0);
+  }
 
   Future<List<MosqueModel>> fetchNearbyMosques({
     required double lat,

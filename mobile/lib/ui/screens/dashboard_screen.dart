@@ -9,6 +9,7 @@ import '../../providers/locale_provider.dart';
 import '../../providers/mosque_providers.dart';
 import '../widgets/mosque_detail_sheet.dart';
 import '../widgets/skeleton_loader.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'add_mosque_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -21,6 +22,38 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   bool _isLocating = false;
+  int _cooldownRemainingMinutes = 0;
+  static const int _scanCooldownMinutes = 10;
+  static const String _lastScanKey = 'last_full_scan_timestamp';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCooldown();
+  }
+
+  Future<void> _checkCooldown() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastScan = prefs.getInt(_lastScanKey) ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final elapsed = now - lastScan;
+      final cooldownMs = _scanCooldownMinutes * 60 * 1000;
+      if (elapsed < cooldownMs) {
+        if (mounted) {
+          setState(() {
+            _cooldownRemainingMinutes = ((cooldownMs - elapsed) / 60000).ceil();
+          });
+        }
+      } else {
+        if (mounted && _cooldownRemainingMinutes > 0) {
+          setState(() {
+            _cooldownRemainingMinutes = 0;
+          });
+        }
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -28,60 +61,114 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _detectNearbyMosques() async {
+  Future<void> _detectNearbyMosques({bool forceDeepScan = false}) async {
     setState(() => _isLocating = true);
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            ),
-            SizedBox(width: 12),
-            Text('GPS orqali yaqin masjidlar qidirilmoqda...'),
-          ],
-        ),
-        duration: Duration(seconds: 3),
-        backgroundColor: AppColors.primary,
-      ),
-    );
-
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastScan = prefs.getInt(_lastScanKey) ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final elapsedMs = now - lastScan;
+      final cooldownMs = _scanCooldownMinutes * 60 * 1000;
+      final isInCooldown = elapsedMs < cooldownMs && !forceDeepScan;
+
       await ref.read(userLocationProvider.notifier).refreshLocation();
       final loc = ref.read(userLocationProvider).value;
-      if (loc != null) {
-        await ref.read(mosquesListProvider.notifier).searchInCustomArea(loc);
-      } else {
+
+      if (loc == null) {
         ref.invalidate(mosquesListProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Joylashuvni aniqlab bo\'lmadi. GPS yoqilganligini tekshiring.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
       }
 
-      if (mounted) {
-        final count = ref.read(mosquesListProvider).value?.length ?? 0;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    count > 0
-                        ? '✅ Joylashuvingiz atrofida $count ta masjid topildi!'
-                        : 'Hudud bo\'yicha qidiruv yakunlandi.',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+      if (isInCooldown) {
+        // Cooldown active (within 10 minutes): instant refresh from DB/cache and notify user
+        final remainingMinutes = ((cooldownMs - elapsedMs) / 60000).ceil();
+        await ref.read(mosquesListProvider.notifier).searchInCustomArea(loc);
+
+        if (mounted) {
+          setState(() => _cooldownRemainingMinutes = remainingMinutes);
+          final count = ref.read(mosquesListProvider).value?.length ?? 0;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '⏱️ Yaqin masjidlar ko\'rsatildi ($count ta).\nYangi to\'liq skanerlash $remainingMinutes daqiqadan so\'ng mumkin.',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              backgroundColor: const Color(0xFF1E293B),
+              duration: const Duration(seconds: 4),
             ),
-            backgroundColor: const Color(0xFF059669),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          );
+        }
+      } else {
+        // Cooldown passed: Full scan & auto-sync new mosques into database!
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('Hudud skanerlanmoqda va yangi masjidlar tekshirilmoqda...')),
+                ],
+              ),
+              duration: Duration(seconds: 4),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+
+        final scanResult = await ref.read(mosquesListProvider.notifier).scanAndSyncArea(loc);
+        await prefs.setInt(_lastScanKey, now);
+
+        if (mounted) {
+          setState(() => _cooldownRemainingMinutes = _scanCooldownMinutes);
+          final count = ref.read(mosquesListProvider).value?.length ?? 0;
+          final newlyAdded = scanResult.newlyAddedCount;
+
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      newlyAdded > 0
+                          ? '✅ $count ta yaqin masjid topildi ($newlyAdded ta yangi masjid bazaga kiritildi)!'
+                          : '✅ Atrofdagi $count ta yaqin masjid to\'liq yangilandi!',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF059669),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -372,7 +459,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     )
                   : const Icon(Icons.radar, size: 20),
               label: Text(
-                _isLocating ? 'Masjidlar aniqlanmoqda...' : '📍 Yaqin Atrofdagi Masjidlarni Aniqlash',
+                _isLocating
+                    ? 'Masjidlar skanerlanmoqda...'
+                    : (_cooldownRemainingMinutes > 0
+                        ? '📍 Yaqin Masjidlar (Skaner: $_cooldownRemainingMinutes daq)'
+                        : '📍 Yaqin Atrofdagi Masjidlarni Skanerlash'),
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 0.2),
               ),
             ),

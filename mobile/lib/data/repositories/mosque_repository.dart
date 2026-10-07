@@ -84,6 +84,35 @@ class MosqueRepository {
     return filtered;
   }
 
+  /// Skanerlash va yangi topilgan masjidlarni bazaga kiritish
+  Future<ScanResult> scanAndSyncArea({
+    required double userLat,
+    required double userLng,
+    double radiusMeters = 25000,
+  }) async {
+    final result = await _apiService.scanAndSyncNearby(
+      lat: userLat,
+      lng: userLng,
+      radiusMeters: radiusMeters,
+    );
+
+    if (result.mosques.isNotEmpty) {
+      await _saveToCache(result.mosques);
+    }
+
+    final listWithDistance = result.mosques.map((m) {
+      final dist = GeoUtils.calculateDistance(userLat, userLng, m.lat, m.lng);
+      return m.copyWith(distanceMeters: dist);
+    }).toList();
+
+    listWithDistance.sort((a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0));
+
+    return ScanResult(
+      mosques: listWithDistance,
+      newlyAddedCount: result.newlyAddedCount,
+    );
+  }
+
   Future<void> _saveToCache(List<MosqueModel> mosques) async {
     try {
       final prefs = await SharedPreferences.getInstance();

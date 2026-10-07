@@ -106,5 +106,6 @@ module.exports = {
   adminReportsQuerySchema,
   adminReportUpdateSchema,
   adminSyncSchema,
+  scanSyncSchema: adminSyncSchema,
   validate
 };

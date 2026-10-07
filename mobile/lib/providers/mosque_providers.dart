@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import '../data/models/mosque_model.dart';
 import '../data/repositories/mosque_repository.dart';
 import '../data/services/location_service.dart';
+import '../data/services/api_service.dart';
 
 // Repository instance provider
 final mosqueRepositoryProvider = Provider<MosqueRepository>((ref) {
@@ -155,6 +156,23 @@ class MosquesListNotifier extends AsyncNotifier<List<MosqueModel>> {
       state = AsyncValue.data(list);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<ScanResult> scanAndSyncArea(LatLng newCenter) async {
+    state = const AsyncValue.loading();
+    try {
+      final repo = ref.read(mosqueRepositoryProvider);
+      final result = await repo.scanAndSyncArea(
+        userLat: newCenter.latitude,
+        userLng: newCenter.longitude,
+        radiusMeters: 25000,
+      );
+      state = AsyncValue.data(result.mosques);
+      return result;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return const ScanResult(mosques: [], newlyAddedCount: 0);
     }
   }
 }

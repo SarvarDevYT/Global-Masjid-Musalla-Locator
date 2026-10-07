@@ -307,6 +307,71 @@ class DatabaseManager {
     return null;
   }
 
+  async upsertOsmMosques(elements) {
+    if (!elements || elements.length === 0) return 0;
+    let newlyInsertedCount = 0;
+
+    if (this.isPostgresConnected) {
+      for (const m of elements) {
+        if (!m.osm_id || !m.lat || !m.lng) continue;
+        try {
+          const res = await this.pool.query(
+            `INSERT INTO mosques (
+              id, osm_id, name, alt_name, address, city, country, type,
+              location, has_wudu_men, has_wudu_women, has_women_prayer_area,
+              has_juma, has_wheelchair_access, has_parking, photo_url, status, verified_count
+            ) VALUES (
+              gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7,
+              ST_SetSRID(ST_MakePoint($8, $9), 4326),
+              $10, $11, $12, $13, $14, $15, $16, $17, $18
+            ) ON CONFLICT (osm_id) DO NOTHING
+            RETURNING id`,
+            [
+              m.osm_id,
+              m.name || 'Jome Masjidi',
+              m.alt_name || null,
+              m.address || "O'zbekiston",
+              m.city || "O'zbekiston",
+              m.country || "O'zbekiston",
+              m.type || 'masjid',
+              m.lng,
+              m.lat,
+              m.has_wudu_men !== false,
+              !!m.has_wudu_women,
+              !!m.has_women_prayer_area,
+              m.has_juma !== false,
+              !!m.has_wheelchair_access,
+              !!m.has_parking,
+              m.photo_url || null,
+              'approved',
+              1
+            ]
+          );
+          if (res.rowCount > 0) {
+            newlyInsertedCount++;
+          }
+        } catch (e) {
+          console.warn('Failed to upsert OSM mosque:', e.message);
+        }
+      }
+    } else {
+      for (const m of elements) {
+        if (!m.osm_id) continue;
+        const exists = this.memoryMosques.some(ex => ex.osm_id === m.osm_id);
+        if (!exists) {
+          this.memoryMosques.push({
+            id: crypto.randomUUID(),
+            ...m,
+            status: 'approved'
+          });
+          newlyInsertedCount++;
+        }
+      }
+    }
+
+    return newlyInsertedCount;
+  }
+
   async addReport(mosqueId, reason, details) {
     const report = {
       id: crypto.randomUUID(),
