@@ -1,43 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
-  initHealthCheck();
   initLiveDemo();
   initQrCode();
 });
 
-// Preset Cities coordinates
+// Preset Cities coordinates for quick demo exploration
 const PRESETS = {
   tashkent: { name: 'Toshkent (Hazrati Imom)', lat: 41.3364, lng: 69.2398 },
   samarkand: { name: 'Samarqand (Registon)', lat: 39.6547, lng: 66.9758 },
   bukhara: { name: 'Buxoro (Poi Kalon)', lat: 39.7758, lng: 64.4150 },
   istanbul: { name: 'Istanbul (Sultanahmet)', lat: 41.0054, lng: 28.9768 },
-  mecca: { name: 'Makkah (Al-Haram)', lat: 21.4225, lng: 39.8262 }
+  mecca: { name: 'Makkah (Al-Haram)', lat: 21.4225, lng: 39.8262 },
+  medina: { name: 'Madina (Masjid an-Nabawi)', lat: 24.4672, lng: 39.6111 }
 };
 
 let currentCoords = PRESETS.tashkent;
 let mosquesData = [];
-
-// Real-time server health status
-async function initHealthCheck() {
-  const statusText = document.getElementById('server-status-text');
-  const statusDot = document.getElementById('server-status-dot');
-  if (!statusText || !statusDot) return;
-
-  try {
-    const res = await fetch('/api/v1/health');
-    if (res.ok) {
-      const data = await res.json();
-      statusText.textContent = data.postgresConnected ? 'Server & Neon DB: Faol' : 'Server: Faol (Kesh)';
-      statusDot.style.background = '#10b981';
-      statusDot.style.boxShadow = '0 0 8px #10b981';
-    } else {
-      statusText.textContent = 'Server: Aloqa sekin';
-      statusDot.style.background = '#f59e0b';
-    }
-  } catch (err) {
-    statusText.textContent = 'Server: Oflayn';
-    statusDot.style.background = '#ef4444';
-  }
-}
 
 // Live Interactive Mosque Finder Demo
 function initLiveDemo() {
@@ -61,8 +38,8 @@ function initLiveDemo() {
             fetchNearbyMosques();
           },
           (err) => {
-            alert('GPS ruxsati olinmadi. Shaharlardan birini tanlashingiz mumkin.');
-            locateBtn.textContent = '📍 GPS Orqali Aniqlash';
+            alert('GPS ruxsati olinmadi. Ro\'yxatdagi shaharlardan birini tanlashingiz mumkin.');
+            locateBtn.textContent = '📍 Joylashuvimni Aniqlash';
           },
           { timeout: 8000 }
         );
@@ -90,7 +67,7 @@ function initLiveDemo() {
     });
   }
 
-  // Initial fetch
+  // Initial fetch for Tashkent
   fetchNearbyMosques();
 }
 
@@ -99,9 +76,9 @@ async function fetchNearbyMosques() {
   if (!container) return;
 
   container.innerHTML = `
-    <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
-      <div style="display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(16,185,129,0.3); border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-      <p style="margin-top: 12px; font-size: 0.9rem;">Yaqin atrofdagi masjidlar qidirilmoqda...</p>
+    <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-silver);">
+      <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid rgba(52,211,153,0.25); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <p style="margin-top: 14px; font-size: 0.95rem; font-weight: 600;">Yaqin atrofdagi masjidlar qidirilmoqda...</p>
     </div>
   `;
 
@@ -115,15 +92,15 @@ async function fetchNearbyMosques() {
       filterAndRenderMosques('');
     } else {
       container.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+        <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted);">
           <p>Ushbu hudud bo'yicha masjidlar topilmadi.</p>
         </div>
       `;
     }
   } catch (err) {
     container.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">
-        <p>Ma'lumotlarni yuklashda xatolik yuz berdi.</p>
+      <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>Ma'lumotlarni yuklashda vaqtinchalik uzilish yuz berdi. Iltimos qayta urinib ko'ring.</p>
       </div>
     `;
   }
@@ -143,8 +120,8 @@ function filterAndRenderMosques(keyword) {
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
-        <p>Qidiruv natijasida masjid topilmadi.</p>
+      <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>Qidiruv so'rovi bo'yicha masjid topilmadi.</p>
       </div>
     `;
     return;
@@ -162,21 +139,23 @@ function filterAndRenderMosques(keyword) {
         <div>
           <div class="mosque-card-head">
             <h4 class="mosque-card-name">${escapeHtml(m.name || 'Masjid')}</h4>
-            <span class="mosque-card-dist">${distText}</span>
+            <span class="mosque-card-dist">📍 ${distText}</span>
           </div>
-          <p class="mosque-card-addr">${escapeHtml(m.address || m.city || 'Aniq manzil ko\'rsatilmagan')}</p>
+          <p class="mosque-card-addr">${escapeHtml(m.address || m.city || 'Aniq manzil ilovada mavjud')}</p>
           <div class="mosque-tags">
             <span class="mosque-tag ${m.has_wudu_men ? 'has' : ''}">
               💧 Tahoratxona (${m.has_wudu_women ? 'Erkak/Ayol' : 'Erkaklar'})
             </span>
-            ${m.has_women_prayer_area ? '<span class="mosque-tag has">🧕 Ayollar zali</span>' : ''}
+            ${m.has_women_prayer_area ? '<span class="mosque-tag has">🧕 Ayollar zali bor</span>' : ''}
             ${m.has_juma ? '<span class="mosque-tag has">🕌 Juma o\'qiladi</span>' : ''}
-            ${m.has_parking ? '<span class="mosque-tag has">🚗 Parking</span>' : ''}
+            ${m.has_parking ? '<span class="mosque-tag has">🚗 Avtoturargoh</span>' : ''}
           </div>
         </div>
         <div class="mosque-card-actions">
-          <span style="font-size: 0.75rem; color: var(--text-dim);">${escapeHtml(m.type === 'musalla' ? 'Namozxona' : 'Jome Masjid')}</span>
-          <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.78rem;">
+          <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">
+            ${escapeHtml(m.type === 'musalla' ? 'Namozxona' : 'Jome Masjidi')}
+          </span>
+          <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 7px 14px;">
             🗺️ Xaritada Ko'rish
           </a>
         </div>
@@ -191,54 +170,54 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// Generate simple SVG QR Code for downloading APK
+// Crisp Vector QR Code for Direct Phone Download
 function initQrCode() {
   const qrWrapper = document.getElementById('qr-canvas-container');
   if (!qrWrapper) return;
 
-  // Aesthetic SVG QR pattern representation
   qrWrapper.innerHTML = `
-    <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="160" height="160" fill="white"/>
-      <!-- QR Position Markers -->
-      <rect x="10" y="10" width="40" height="40" rx="6" fill="#111827"/>
-      <rect x="18" y="18" width="24" height="24" rx="3" fill="white"/>
-      <rect x="23" y="23" width="14" height="14" rx="2" fill="#047857"/>
+    <svg width="170" height="170" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="160" height="160" rx="8" fill="white"/>
+      <!-- Outer Positioning Rings -->
+      <rect x="12" y="12" width="38" height="38" rx="7" fill="#047857"/>
+      <rect x="18" y="18" width="26" height="26" rx="4" fill="white"/>
+      <rect x="23" y="23" width="16" height="16" rx="3" fill="#047857"/>
 
-      <rect x="110" y="10" width="40" height="40" rx="6" fill="#111827"/>
-      <rect x="118" y="18" width="24" height="24" rx="3" fill="white"/>
-      <rect x="123" y="23" width="14" height="14" rx="2" fill="#047857"/>
+      <rect x="110" y="12" width="38" height="38" rx="7" fill="#047857"/>
+      <rect x="116" y="18" width="26" height="26" rx="4" fill="white"/>
+      <rect x="121" y="23" width="16" height="16" rx="3" fill="#047857"/>
 
-      <rect x="10" y="110" width="40" height="40" rx="6" fill="#111827"/>
-      <rect x="18" y="118" width="24" height="24" rx="3" fill="white"/>
-      <rect x="23" y="123" width="14" height="14" rx="2" fill="#047857"/>
+      <rect x="12" y="110" width="38" height="38" rx="7" fill="#047857"/>
+      <rect x="18" y="116" width="26" height="26" rx="4" fill="white"/>
+      <rect x="23" y="121" width="16" height="16" rx="3" fill="#047857"/>
 
-      <!-- Data Dots -->
-      <rect x="60" y="15" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="75" y="15" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="90" y="25" width="10" height="10" rx="2" fill="#10b981"/>
-      <rect x="60" y="35" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="80" y="45" width="10" height="10" rx="2" fill="#111827"/>
+      <!-- Matrix Patterns -->
+      <rect x="58" y="14" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="74" y="14" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="90" y="24" width="10" height="10" rx="2" fill="#10b981"/>
+      <rect x="58" y="34" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="78" y="44" width="10" height="10" rx="2" fill="#064e3b"/>
 
-      <rect x="15" y="60" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="35" y="65" width="10" height="10" rx="2" fill="#10b981"/>
-      <rect x="20" y="80" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="35" y="95" width="10" height="10" rx="2" fill="#111827"/>
+      <rect x="16" y="60" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="36" y="64" width="10" height="10" rx="2" fill="#10b981"/>
+      <rect x="20" y="80" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="36" y="94" width="10" height="10" rx="2" fill="#064e3b"/>
 
-      <rect x="60" y="60" width="40" height="40" rx="8" fill="#10b981"/>
-      <path d="M73 80L78 85L87 75" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Center App Emblem inside QR -->
+      <rect x="58" y="58" width="44" height="44" rx="10" fill="#059669"/>
+      <path d="M72 80L78 86L88 74" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
 
-      <rect x="110" y="60" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="125" y="75" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="140" y="65" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="115" y="90" width="10" height="10" rx="2" fill="#10b981"/>
+      <rect x="110" y="60" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="126" y="74" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="138" y="64" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="116" y="90" width="10" height="10" rx="2" fill="#10b981"/>
 
-      <rect x="60" y="110" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="80" y="115" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="70" y="130" width="10" height="10" rx="2" fill="#10b981"/>
-      <rect x="90" y="140" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="115" y="120" width="10" height="10" rx="2" fill="#111827"/>
-      <rect x="135" y="135" width="10" height="10" rx="2" fill="#111827"/>
+      <rect x="58" y="112" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="78" y="116" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="68" y="132" width="10" height="10" rx="2" fill="#10b981"/>
+      <rect x="90" y="140" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="114" y="122" width="10" height="10" rx="2" fill="#064e3b"/>
+      <rect x="134" y="136" width="10" height="10" rx="2" fill="#064e3b"/>
     </svg>
   `;
 }
