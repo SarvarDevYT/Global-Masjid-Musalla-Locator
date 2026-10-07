@@ -30,36 +30,56 @@ class HomeScreen extends ConsumerWidget {
         index: currentTab,
         children: pages,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentTab,
-        onDestinationSelected: (index) {
-          ref.read(currentTabProvider.notifier).state = index;
-        },
-        backgroundColor: isDark ? const Color(0xFF111827) : Colors.white,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
-        elevation: 10,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home, color: AppColors.primary),
-            label: AppTranslations.get('all', locale) == 'Barchasi' ? 'Bosh Sahifa' : 'Home',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+              width: 1,
+            ),
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.map_outlined),
-            selectedIcon: const Icon(Icons.map, color: AppColors.primary),
-            label: AppTranslations.get('all', locale) == 'Barchasi' ? 'Xarita' : 'Map',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.explore_outlined),
-            selectedIcon: const Icon(Icons.explore, color: AppColors.accentGold),
-            label: AppTranslations.get('qibla_compass', locale).split(' ').first,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings, color: AppColors.primary),
-            label: AppTranslations.get('settings', locale),
-          ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: currentTab,
+          onDestinationSelected: (index) {
+            ref.read(currentTabProvider.notifier).state = index;
+          },
+          backgroundColor: Colors.transparent,
+          indicatorColor: currentTab == 2
+              ? AppColors.gold.withValues(alpha: 0.22)
+              : AppColors.primary.withValues(alpha: 0.16),
+          elevation: 0,
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.mosque, color: AppColors.primary),
+              label: AppTranslations.get('all', locale) == 'Barchasi' ? 'Bosh Sahifa' : 'Home',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.map_outlined),
+              selectedIcon: const Icon(Icons.map, color: AppColors.primary),
+              label: AppTranslations.get('all', locale) == 'Barchasi' ? 'Xarita' : 'Map',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.explore_outlined),
+              selectedIcon: const Icon(Icons.explore, color: AppColors.gold),
+              label: AppTranslations.get('qibla_compass', locale).split(' ').first,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings, color: AppColors.primary),
+              label: AppTranslations.get('settings', locale),
+            ),
+          ],
+        ),
       ),
     );
   }

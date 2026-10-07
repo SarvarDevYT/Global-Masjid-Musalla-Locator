@@ -25,23 +25,24 @@ class MosqueCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            color: (isDark ? AppColors.primary : Colors.black).withValues(alpha: isDark ? 0.25 : 0.05),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -53,29 +54,35 @@ class MosqueCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: mosque.isMasjid
-                            ? AppColors.primary.withValues(alpha: 0.12)
-                            : AppColors.accentGold.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+                            ? AppColors.primary.withValues(alpha: 0.14)
+                            : AppColors.gold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: mosque.isMasjid
+                              ? AppColors.primary.withValues(alpha: 0.3)
+                              : AppColors.gold.withValues(alpha: 0.4),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             mosque.isMasjid ? Icons.mosque : Icons.meeting_room,
-                            size: 13,
-                            color: mosque.isMasjid ? AppColors.primary : AppColors.accentGold,
+                            size: 14,
+                            color: mosque.isMasjid ? AppColors.primaryLight : AppColors.gold,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 5),
                           Text(
                             mosque.isMasjid
                                 ? AppTranslations.get('masjid', locale)
                                 : AppTranslations.get('musalla', locale),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: mosque.isMasjid ? AppColors.primary : AppColors.accentGold,
+                              color: mosque.isMasjid ? (isDark ? AppColors.primaryLight : AppColors.primary) : AppColors.gold,
                             ),
                           ),
                         ],
@@ -83,21 +90,22 @@ class MosqueCard extends StatelessWidget {
                     ),
                     if (mosque.distanceMeters != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: AppColors.gold.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.35), width: 1),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.near_me, size: 12, color: AppColors.primary),
+                            Icon(Icons.near_me, size: 12, color: isDark ? AppColors.goldLight : AppColors.goldDark),
                             const SizedBox(width: 4),
                             Text(
                               GeoUtils.formatDistance(mosque.distanceMeters!),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                                color: isDark ? AppColors.goldLight : AppColors.goldDark,
                               ),
                             ),
                           ],

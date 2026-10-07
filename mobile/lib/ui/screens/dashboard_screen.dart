@@ -186,34 +186,56 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0D131F) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF111827) : Colors.white,
+        backgroundColor: isDark ? AppColors.darkBg : Colors.white,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+            height: 1,
+          ),
+        ),
         title: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF10B981), Color(0xFF047857)],
-                ),
-                borderRadius: BorderRadius.circular(10),
+                gradient: AppColors.emeraldGradient,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.gold, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.mosque, color: Colors.white, size: 20),
+              child: const Icon(Icons.mosque, color: AppColors.goldLight, size: 22),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   AppTranslations.get('app_title', locale),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
                 ),
                 const Text(
-                  'Global Musalla Locator',
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                  'بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ],
             ),
@@ -221,7 +243,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_location_alt, color: AppColors.primary),
+            icon: const Icon(Icons.add_location_alt, color: AppColors.primaryLight),
             tooltip: AppTranslations.get('add_mosque', locale),
             onPressed: () {
               Navigator.push(
@@ -339,22 +361,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF064E3B), const Color(0xFF0D281E), const Color(0xFF111827)]
-              : [const Color(0xFFE8F5E9), const Color(0xFFE0F2F1), const Color(0xFFFFFFFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: isDark ? AppColors.cardGradientDark : AppColors.cardGradientLight,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.35),
+          color: isDark
+              ? AppColors.gold.withValues(alpha: 0.35)
+              : AppColors.primary.withValues(alpha: 0.25),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.15),
-            blurRadius: 16,
+            color: (isDark ? AppColors.primary : AppColors.gold).withValues(alpha: 0.12),
+            blurRadius: 18,
             offset: const Offset(0, 6),
           ),
         ],
@@ -364,19 +382,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.22),
+                  gradient: AppColors.emeraldGradient,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.4)),
+                  border: Border.all(color: AppColors.gold, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    ),
+                  ],
                 ),
                 child: _isLocating
                     ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
+                        padding: EdgeInsets.all(13),
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.goldLight),
                       )
-                    : const Icon(Icons.my_location, color: AppColors.primary, size: 26),
+                    : const Icon(Icons.my_location, color: AppColors.goldLight, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -389,20 +414,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: userLocAsync.hasValue ? const Color(0xFF10B981) : Colors.orange,
+                            color: userLocAsync.hasValue ? AppColors.success : AppColors.warning,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: userLocAsync.hasValue ? const Color(0xFF10B981) : Colors.orange,
+                                color: userLocAsync.hasValue ? AppColors.success : AppColors.warning,
                                 blurRadius: 6,
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Text(
+                        Text(
                           'Sizning Joylashuvingiz',
-                          style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -413,12 +442,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                         ),
                       ),
-                      loading: () => const Text(
+                      loading: () => Text(
                         'GPS aniqlanmoqda...',
-                        style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
                       ),
                       error: (_, __) => const Text(
                         'Standart hudud faol',
@@ -429,42 +462,67 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.refresh, color: AppColors.primary),
+                icon: const Icon(Icons.refresh, color: AppColors.gold),
                 tooltip: 'Joylashuvni yangilash',
                 onPressed: _isLocating ? null : _detectNearbyMosques,
               ),
             ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           // Big prominent "Atrofdagi Masjidlarni Aniqlash" button
-          SizedBox(
+          Container(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 4,
-                shadowColor: AppColors.primary.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-              ),
-              onPressed: _isLocating ? null : _detectNearbyMosques,
-              icon: _isLocating
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.radar, size: 20),
-              label: Text(
-                _isLocating
-                    ? 'Masjidlar skanerlanmoqda...'
-                    : (_cooldownRemainingMinutes > 0
-                        ? '📍 Yaqin Masjidlar (Skaner: $_cooldownRemainingMinutes daq)'
-                        : '📍 Yaqin Atrofdagi Masjidlarni Skanerlash'),
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 0.2),
+            decoration: BoxDecoration(
+              gradient: AppColors.emeraldGradient,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.6), width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: _isLocating ? null : _detectNearbyMosques,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _isLocating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.goldLight),
+                            )
+                          : const Icon(Icons.radar, color: AppColors.goldLight, size: 22),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          _isLocating
+                              ? 'Masjidlar skanerlanmoqda...'
+                              : (_cooldownRemainingMinutes > 0
+                                  ? '📍 Yaqin Masjidlar (Kutish: $_cooldownRemainingMinutes daq)'
+                                  : '📍 Yaqin Atrofdagi Masjidlarni Skanerlash'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.2,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -481,36 +539,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.45,
       children: [
-        // 1. Qibla Compass
+        // 1. Qibla Compass (Imperial Islamic Gold)
         _buildServiceCard(
           title: 'Qibla Kompasi',
           subtitle: 'Ka\'ba tomon yo\'nalish',
           icon: Icons.explore,
-          gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+          gradient: const [Color(0xFFB78B1E), Color(0xFFD4AF37), Color(0xFFFDE68A)],
+          borderColor: AppColors.goldLight.withValues(alpha: 0.6),
           onTap: () {
             ref.read(currentTabProvider.notifier).state = 2; // Switch to Qibla Tab
           },
         ),
 
-        // 2. Map Explorer
+        // 2. Map Explorer (Royal Islamic Emerald)
         _buildServiceCard(
           title: 'Xarita & Navigator',
           subtitle: 'Xaritada ko\'rish',
           icon: Icons.map,
-          gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+          gradient: const [Color(0xFF044332), Color(0xFF065F46), Color(0xFF0D9488)],
+          borderColor: AppColors.primaryLight.withValues(alpha: 0.5),
           onTap: () {
             ref.read(currentTabProvider.notifier).state = 1; // Switch to Map Tab
           },
         ),
 
-        // 3. Add Mosque
+        // 3. Add Mosque (Islamic Malachite)
         _buildServiceCard(
           title: 'Masjid Qo\'shish',
           subtitle: 'Yangi joy kiritish',
           icon: Icons.add_business,
-          gradient: const [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+          gradient: const [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF10B981)],
+          borderColor: AppColors.gold.withValues(alpha: 0.4),
           onTap: () {
             Navigator.push(
               context,
@@ -519,12 +580,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           },
         ),
 
-        // 4. Settings
+        // 4. Settings (Ka'ba Kiswah Midnight Slate)
         _buildServiceCard(
           title: 'Sozlamalar',
           subtitle: 'Til va oflayn kesh',
           icon: Icons.settings,
-          gradient: const [Color(0xFF6B7280), Color(0xFF374151)],
+          gradient: const [Color(0xFF0B2125), Color(0xFF153940), Color(0xFF1E4B54)],
+          borderColor: isDark ? AppColors.darkCardBorder : Colors.white24,
           onTap: () {
             ref.read(currentTabProvider.notifier).state = 3; // Switch to Settings Tab
           },
@@ -538,11 +600,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required String subtitle,
     required IconData icon,
     required List<Color> gradient,
+    required Color borderColor,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -551,10 +614,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: borderColor, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: gradient.first.withValues(alpha: 0.3),
+              color: gradient.first.withValues(alpha: 0.35),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -568,7 +632,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, color: Colors.white, size: 28),
-                const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 14),
+                const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 13),
               ],
             ),
             Column(
@@ -576,7 +640,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    shadows: [Shadow(color: Colors.black38, blurRadius: 4)],
+                  ),
                 ),
                 Text(
                   subtitle,
@@ -594,16 +663,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildSearchBar(bool isDark, String locale) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade200),
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: TextField(
         controller: _searchCtrl,
         decoration: InputDecoration(
           hintText: AppTranslations.get('search_hint', locale),
-          hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-          prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+          hintStyle: TextStyle(
+            fontSize: 13,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+          ),
+          prefixIcon: const Icon(Icons.search, color: AppColors.primaryLight),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
@@ -617,7 +699,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // Filter Chips
   Widget _buildFilterChips(MosqueFilters filters, String locale) {
     return SizedBox(
-      height: 36,
+      height: 38,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
@@ -664,21 +746,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.withValues(alpha: 0.4),
+            color: isSelected ? AppColors.gold : AppColors.lightCardBorder,
+            width: isSelected ? 1.4 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey,
+              color: isSelected ? Colors.white : AppColors.lightTextSecondary,
               fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
           ),
         ),
@@ -699,16 +791,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade200,
+          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -719,15 +812,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: mosque.isMasjid
-                        ? [const Color(0xFF10B981), const Color(0xFF047857)]
-                        : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
-                  ),
+                  gradient: mosque.isMasjid ? AppColors.emeraldGradient : AppColors.goldGradient,
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: mosque.isMasjid ? AppColors.gold : AppColors.goldLight,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (mosque.isMasjid ? AppColors.primary : AppColors.gold).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Icon(
                   mosque.isMasjid ? Icons.mosque : Icons.meeting_room,
@@ -742,7 +842,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   children: [
                     Text(
                       mosque.name,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -760,15 +864,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.gold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.35), width: 1),
                 ),
                 child: Text(
                   '📍 $distText',
-                  style: const TextStyle(
-                    color: AppColors.primary,
+                  style: TextStyle(
+                    color: isDark ? AppColors.goldLight : AppColors.goldDark,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -784,16 +889,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             spacing: 6,
             runSpacing: 6,
             children: [
-              _buildTag('💧 Tahoratxona', mosque.hasWuduMen),
-              if (mosque.hasWuduWomen) _buildTag('🧕 Ayollar tahoratxonasi', true),
-              if (mosque.hasWomenPrayerArea) _buildTag('🧕 Ayollar zali', true),
-              if (mosque.hasJuma) _buildTag('🕌 Juma o\'qiladi', true),
-              if (mosque.hasParking) _buildTag('🚗 Avtoturargoh', true),
+              _buildTag('💧 Tahoratxona', mosque.hasWuduMen, isDark),
+              if (mosque.hasWuduWomen) _buildTag('🧕 Ayollar tahoratxonasi', true, isDark),
+              if (mosque.hasWomenPrayerArea) _buildTag('🧕 Ayollar zali', true, isDark),
+              if (mosque.hasJuma) _buildTag('🕌 Juma o\'qiladi', true, isDark),
+              if (mosque.hasParking) _buildTag('🚗 Avtoturargoh', true, isDark),
             ],
           ),
 
           const SizedBox(height: 14),
-          const Divider(height: 1),
+          Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
           const SizedBox(height: 10),
 
           // Actions: Borish & Xaritada ko'rish
@@ -806,7 +911,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    elevation: 0,
+                    elevation: 1,
                   ),
                   onPressed: () {
                     NavigationDialog.show(
@@ -824,8 +929,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: isDark ? Colors.white : Colors.black87,
-                  side: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade300),
+                  foregroundColor: isDark ? AppColors.goldLight : AppColors.primary,
+                  side: BorderSide(
+                    color: isDark ? AppColors.gold.withValues(alpha: 0.5) : AppColors.primaryLight,
+                  ),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 ),
@@ -839,7 +946,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.info_outline, size: 20),
-                color: Colors.grey,
+                color: AppColors.gold,
                 onPressed: () {
                   MosqueDetailSheet.show(
                     context,
@@ -857,17 +964,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildTag(String text, bool active) {
+  Widget _buildTag(String text, bool active, [bool isDark = false]) {
     if (!active) return const SizedBox.shrink();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
+        color: isDark
+            ? AppColors.primaryDark.withValues(alpha: 0.35)
+            : AppColors.primarySurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark
+              ? AppColors.primaryLight.withValues(alpha: 0.25)
+              : AppColors.primary.withValues(alpha: 0.2),
+          width: 0.8,
+        ),
       ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontSize: 11,
+          color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -876,32 +995,54 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(32),
       alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+        ),
+      ),
       child: Column(
         children: [
-          const Icon(Icons.location_off, size: 48, color: Colors.grey),
-          const SizedBox(height: 12),
-          const Text(
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.mosque_outlined, size: 48, color: AppColors.primary),
+          ),
+          const SizedBox(height: 14),
+          Text(
             'Yaqin-atrofda masjid topilmadi',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'GPS joylashuvingizni yangilang yoki xaritadan qidiring.',
+          Text(
+            'GPS joylashuvingizni yangilang yoki boshqa hududni skanerlang.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey, fontSize: 13),
+            style: TextStyle(
+              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              fontSize: 13,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: () {
               ref.read(userLocationProvider.notifier).refreshLocation();
             },
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Qayta qidirish'),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Qayta qidirish', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

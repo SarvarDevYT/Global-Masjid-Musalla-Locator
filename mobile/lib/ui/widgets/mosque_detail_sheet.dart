@@ -271,22 +271,36 @@ class MosqueDetailSheet extends StatelessWidget {
       height: 140,
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primaryDark,
-            AppColors.primary,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        borderRadius: BorderRadius.circular(18),
+        gradient: AppColors.emeraldGradient,
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.4), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Center(
-        child: Icon(
-          mosque.isMasjid ? Icons.mosque : Icons.meeting_room,
-          size: 54,
-          color: Colors.white.withValues(alpha: 0.85),
-        ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Islamic crescent / aura circle
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.gold.withValues(alpha: 0.15),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.35), width: 1.5),
+            ),
+          ),
+          Icon(
+            mosque.isMasjid ? Icons.mosque : Icons.meeting_room,
+            size: 50,
+            color: AppColors.goldLight,
+          ),
+        ],
       ),
     );
   }
