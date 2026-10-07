@@ -29,14 +29,17 @@ class DatabaseManager {
     try {
       if (config.db.connectionString || (config.db.host && config.db.database)) {
         this.pool = new Pool({
-          connectionString: config.db.connectionString,
+          connectionString: config.db.pooledConnectionString,
           host: config.db.host,
           port: config.db.port,
           database: config.db.database,
           user: config.db.user,
           password: config.db.password,
           ssl: config.db.ssl,
-          connectionTimeoutMillis: 3000
+          // Serverless: har bir instansiya uchun kichik pool (Neon pooler bilan)
+          max: config.isProd ? 3 : 10,
+          idleTimeoutMillis: 10000,
+          connectionTimeoutMillis: 5000
         });
 
         // Test connection
@@ -206,7 +209,8 @@ class DatabaseManager {
     return results.slice(offset, offset + limit);
   }
 
-  async getById(id) {
+  // onlyApproved: ommaviy API faqat tasdiqlangan joylarni qaytaradi (pending/rejected yashirin)
+  async getById(id, { onlyApproved = false } = {}) {
     if (this.isPostgresConnected) {
       const res = await this.pool.query(
         `SELECT id, osm_id, name, alt_name, address, city, country, type,
@@ -218,10 +222,13 @@ class DatabaseManager {
       );
       if (res.rows.length === 0) return null;
       const r = res.rows[0];
+      if (onlyApproved && r.status !== 'approved') return null;
       return { ...r, lat: parseFloat(r.lat), lng: parseFloat(r.lng) };
     }
 
-    return this.memoryMosques.find(m => m.id === id) || null;
+    const found = this.memoryMosques.find(m => m.id === id) || null;
+    if (found && onlyApproved && found.status !== 'approved') return null;
+    return found;
   }
 
   async addContribution(data) {
@@ -321,6 +328,32 @@ class DatabaseManager {
 
   async upsertOsmMosques(mosques) {
     let inserted = 0;
+
+    if (this.isPostgresConnected) {
+      for (const m of mosques) {
+        const res = await this.pool.query(
+          `INSERT INTO mosques (
+            osm_id, name, alt_name, address, city, country, type, location,
+            has_wudu_men, has_wudu_women, has_women_prayer_area, has_juma,
+            has_wheelchair_access, has_parking, photo_url, status, verified_count
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, ST_SetSRID(ST_MakePoint($8, $9), 4326),
+            $10, $11, $12, $13, $14, $15, $16, 'approved', $17
+          ) ON CONFLICT (osm_id) DO NOTHING`,
+          [
+            m.osm_id, String(m.name).slice(0, 255), m.alt_name ? String(m.alt_name).slice(0, 255) : null,
+            m.address, m.city ? String(m.city).slice(0, 100) : null,
+            m.country ? String(m.country).slice(0, 100) : null, m.type,
+            m.lng, m.lat,
+            m.has_wudu_men, m.has_wudu_women, m.has_women_prayer_area, m.has_juma,
+            m.has_wheelchair_access, m.has_parking, m.photo_url || null, m.verified_count || 0
+          ]
+        );
+        inserted += res.rowCount;
+      }
+      return inserted;
+    }
+
     for (const m of mosques) {
       const existing = this.memoryMosques.find(item => item.osm_id && item.osm_id === m.osm_id);
       if (!existing) {
@@ -329,6 +362,110 @@ class DatabaseManager {
       }
     }
     return inserted;
+  }
+
+  // ---------- Admin panel metodlari (barchasi parametrlangan so'rovlar) ----------
+
+  _escapeLike(value) {
+    return String(value).replace(/[\\%_]/g, '\\$&');
+  }
+
+  async listMosques({ status, q, limit = 50, offset = 0 }) {
+    if (this.isPostgresConnected) {
+      const params = [];
+      let where = 'WHERE 1=1';
+      if (status) {
+        params.push(status);
+        where += ` AND status = $${params.length}`;
+      }
+      if (q) {
+        params.push(`%${this._escapeLike(q)}%`);
+        const n = params.length;
+        where += ` AND (name ILIKE $${n} OR address ILIKE $${n} OR city ILIKE $${n})`;
+      }
+      params.push(limit, offset);
+      const res = await this.pool.query(
+        `SELECT id, name, alt_name, address, city, country, type,
+                ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng,
+                has_wudu_men, has_wudu_women, has_women_prayer_area, has_juma,
+                has_wheelchair_access, has_parking, photo_url, status, verified_count, created_at
+         FROM mosques ${where}
+         ORDER BY created_at DESC
+         LIMIT $${params.length - 1} OFFSET $${params.length}`,
+        params
+      );
+      return res.rows.map(r => ({ ...r, lat: parseFloat(r.lat), lng: parseFloat(r.lng) }));
+    }
+
+    const qLower = q ? q.toLowerCase() : null;
+    return this.memoryMosques
+      .filter(m => (!status || m.status === status) &&
+        (!qLower || [m.name, m.address, m.city].some(v => (v || '').toLowerCase().includes(qLower))))
+      .slice(offset, offset + limit);
+  }
+
+  async getStats() {
+    if (this.isPostgresConnected) {
+      const byStatus = await this.pool.query(
+        'SELECT status, COUNT(*)::int AS count FROM mosques GROUP BY status'
+      );
+      const reports = await this.pool.query(
+        "SELECT COUNT(*)::int AS count FROM mosque_reports WHERE status = 'open'"
+      );
+      const stats = { total: 0, approved: 0, pending: 0, rejected: 0, openReports: reports.rows[0].count };
+      for (const row of byStatus.rows) {
+        stats[row.status] = row.count;
+        stats.total += row.count;
+      }
+      return stats;
+    }
+
+    const stats = { total: this.memoryMosques.length, approved: 0, pending: 0, rejected: 0, openReports: 0 };
+    for (const m of this.memoryMosques) stats[m.status] = (stats[m.status] || 0) + 1;
+    stats.openReports = this.memoryReports.filter(r => r.status === 'open').length;
+    return stats;
+  }
+
+  async listReports({ status, limit = 50, offset = 0 }) {
+    if (this.isPostgresConnected) {
+      const res = await this.pool.query(
+        `SELECT r.id, r.mosque_id, r.reason, r.details, r.status, r.created_at, m.name AS mosque_name
+         FROM mosque_reports r
+         JOIN mosques m ON m.id = r.mosque_id
+         WHERE ($1::text IS NULL OR r.status = $1)
+         ORDER BY r.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [status || null, limit, offset]
+      );
+      return res.rows;
+    }
+
+    return this.memoryReports
+      .filter(r => !status || r.status === status)
+      .slice(offset, offset + limit)
+      .map(r => {
+        const m = this.memoryMosques.find(item => item.id === r.mosque_id);
+        return { ...r, mosque_name: m ? m.name : null };
+      });
+  }
+
+  async updateReportStatus(id, status) {
+    if (!['reviewed', 'resolved', 'open'].includes(status)) {
+      throw new Error('Invalid report status');
+    }
+    if (this.isPostgresConnected) {
+      const res = await this.pool.query(
+        'UPDATE mosque_reports SET status = $1 WHERE id = $2 RETURNING id, status',
+        [status, id]
+      );
+      return res.rows[0] || null;
+    }
+    const item = this.memoryReports.find(r => r.id === id);
+    if (item) {
+      item.status = status;
+      return item;
+    }
+    return null;
   }
 }
 

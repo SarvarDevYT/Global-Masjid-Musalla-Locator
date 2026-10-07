@@ -26,9 +26,14 @@ class StorageService {
       console.log('✓ Neon Object Storage (S3) client configured');
     } else {
       console.log('ℹ S3 credentials not provided. Using local uploads directory fallback.');
-      this.localUploadDir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(this.localUploadDir)) {
-        fs.mkdirSync(this.localUploadDir, { recursive: true });
+      try {
+        this.localUploadDir = path.join(__dirname, '../../uploads');
+        if (!fs.existsSync(this.localUploadDir)) {
+          fs.mkdirSync(this.localUploadDir, { recursive: true });
+        }
+      } catch {
+        // Faqat o'qish uchun fayl tizimi (serverless): lokal saqlash mavjud emas
+        this.localUploadDir = null;
       }
     }
   }
@@ -60,6 +65,9 @@ class StorageService {
     }
 
     // Local fallback
+    if (!this.localUploadDir) {
+      throw new Error('Storage is not configured');
+    }
     const filePath = path.join(this.localUploadDir, filename);
     await fs.promises.writeFile(filePath, fileBuffer);
     return `/uploads/${filename}`;

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Boshqaruv Paneli — Global Masjid Locator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+
+  <!-- Login Modal Overlay -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-card">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C10.5 4.5 9 7 9 9.5C9 10.5 9.3 11.4 9.8 12.2C8.7 12.7 8 13.8 8 15V21H16V15C16 13.8 15.3 12.7 14.2 12.2C14.7 11.4 15 10.5 15 9.5C15 7 13.5 4.5 12 2ZM6 16V21H4V16C4 14.9 4.9 14 6 14V16ZM18 14C19.1 14 20 14.9 20 16V21H18V14Z"/>
+        </svg>
+      </div>
+      <h3>Admin Tizimiga Kirish</h3>
+      <p>Masjidlar va ma'lumotlar bazasini boshqarish uchun administrator parolini kiriting</p>
+
+      <div class="login-error" id="login-error"></div>
+
+      <form id="login-form">
+        <div class="form-group" style="margin-bottom: 20px; text-align: left;">
+          <label for="admin-password">Parol</label>
+          <input type="password" id="admin-password" class="form-input" placeholder="Admin paroli..." required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Tizimga Kirish</button>
+      </form>
+      <div style="margin-top: 16px;">
+        <a href="/" style="color: var(--text-muted); font-size: 0.8rem; text-decoration: none;">← Bosh sahifaga qaytish</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard Layout -->
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div>
+        <div class="brand-wrapper">
+          <div class="brand-logo">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2C10.5 4.5 9 7 9 9.5C9 10.5 9.3 11.4 9.8 12.2C8.7 12.7 8 13.8 8 15V21H16V15C16 13.8 15.3 12.7 14.2 12.2C14.7 11.4 15 10.5 15 9.5C15 7 13.5 4.5 12 2Z"/>
+            </svg>
+          </div>
+          <div class="brand-title">
+            <h2>Masjid Locator</h2>
+            <span>Admin Control</span>
+          </div>
+        </div>
+
+        <ul class="nav-menu">
+          <li class="nav-item active" data-tab="mosques">
+            <span>🕌</span>
+            <span>Masjidlar Ro'yxati</span>
+          </li>
+          <li class="nav-item" data-tab="add">
+            <span>➕</span>
+            <span>Yangi Masjid Qo'shish</span>
+          </li>
+          <li class="nav-item" data-tab="reports">
+            <span>⚠️</span>
+            <span>Shikoyatlar & Xatolar</span>
+          </li>
+          <li class="nav-item" data-tab="sync">
+            <span>🔄</span>
+            <span>OSM Sinxronizatsiya</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="/" class="btn btn-secondary btn-sm" style="width: 100%; margin-bottom: 10px;">
+          🌐 Landing Sahifasi
+        </a>
+        <button type="button" class="btn btn-danger btn-sm" id="logout-btn" style="width: 100%;">
+          🚪 Chiqish (Logout)
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="admin-main">
+      <header class="admin-header">
+        <div class="page-title">
+          <h3 id="current-page-title">Boshqaruv Paneli</h3>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span style="font-size: 0.85rem; color: #10b981; font-weight: 600;">● Admin Sessiyasi Faol</span>
+        </div>
+      </header>
+
+      <div class="admin-body">
+        <!-- Top Stats Row -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-info">
+              <span>Jami Masjidlar</span>
+              <h2 id="stat-total">-</h2>
+            </div>
+            <div class="stat-icon">🕌</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span>Tasdiqlangan</span>
+              <h2 id="stat-approved">-</h2>
+            </div>
+            <div class="stat-icon" style="color: #10b981;">✓</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span>Kutilayotganlar</span>
+              <h2 id="stat-pending">-</h2>
+            </div>
+            <div class="stat-icon" style="color: #f59e0b;">⏳</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span>Shikoyatlar</span>
+              <h2 id="stat-reports">-</h2>
+            </div>
+            <div class="stat-icon" style="color: #ef4444;">⚠️</div>
+          </div>
+        </div>
+
+        <!-- TAB 1: Mosques List -->
+        <div class="tab-content" id="tab-mosques">
+          <div class="content-card">
+            <div class="card-header">
+              <h4 class="card-title">Masjidlar va Musallalar</h4>
+              <div class="filters-bar">
+                <select id="filter-status" class="filter-select">
+                  <option value="all">Barcha holatlar</option>
+                  <option value="approved">Faqat Tasdiqlangan</option>
+                  <option value="pending">Kutilmoqda (Pending)</option>
+                  <option value="rejected">Rad etilgan</option>
+                </select>
+                <input type="text" id="search-mosque" class="form-input" placeholder="Nomi yoki shahar..." style="width: 220px;">
+              </div>
+            </div>
+
+            <div class="data-table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Rasm</th>
+                    <th>Nomi / Manzil</th>
+                    <th>Shahar / Davlat</th>
+                    <th>Turi</th>
+                    <th>Holati</th>
+                    <th>Harakatlar</th>
+                  </tr>
+                </thead>
+                <tbody id="mosques-tbody">
+                  <!-- Rendered by admin.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Add Mosque -->
+        <div class="tab-content" id="tab-add" style="display: none;">
+          <div class="content-card">
+            <div class="card-header">
+              <h4 class="card-title">Yangi Masjid yoki Namozxona Qo'shish</h4>
+            </div>
+
+            <form id="add-mosque-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="input-name">Masjid Nomi *</label>
+                  <input type="text" id="input-name" class="form-input" placeholder="Masalan: Minor Jome Masjidi" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-alt-name">Qo'shimcha Nomi (Inglizcha / Xalqaro)</label>
+                  <input type="text" id="input-alt-name" class="form-input" placeholder="Masalan: Minor Mosque">
+                </div>
+
+                <div class="form-group">
+                  <label for="input-address">Manzil / Ko'cha *</label>
+                  <input type="text" id="input-address" class="form-input" placeholder="Ko'cha va uy raqami" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-city">Shahar *</label>
+                  <input type="text" id="input-city" class="form-input" placeholder="Toshkent, Samarqand..." required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-country">Davlat</label>
+                  <input type="text" id="input-country" class="form-input" value="O'zbekiston">
+                </div>
+
+                <div class="form-group">
+                  <label for="input-type">Turi</label>
+                  <select id="input-type" class="filter-select">
+                    <option value="masjid">Jome Masjidi</option>
+                    <option value="musalla">Namozxona (Musalla)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-lat">Kenglik (Latitude) *</label>
+                  <input type="number" step="any" id="input-lat" class="form-input" placeholder="41.3364" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="input-lng">Uzunlik (Longitude) *</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="number" step="any" id="input-lng" class="form-input" placeholder="69.2398" required style="flex:1;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-get-current-pos">📍 GPS</button>
+                  </div>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                  <label for="input-photo">Rasm Yuklash (Neon S3 Object Storage)</label>
+                  <input type="file" id="input-photo" class="form-input" accept="image/jpeg,image/png,image/webp">
+                </div>
+              </div>
+
+              <div style="margin-top: 24px;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 10px;">
+                  Mavjud Qulayliklar:
+                </label>
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="check-wudu-men" checked> Erkaklar tahoratxonasi
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="check-wudu-women"> Ayollar tahoratxonasi
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="check-women-prayer"> Ayollar namozxonasi
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="check-juma" checked> Juma namozi o'qiladi
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="check-wheelchair"> Nogironlar aravachasi yo'lagi
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="check-parking"> Avtoturargoh (Parking)
+                  </label>
+                </div>
+              </div>
+
+              <div style="margin-top: 30px;">
+                <button type="submit" class="btn btn-primary" id="btn-save-mosque">
+                  Masjidni Saqlash
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- TAB 3: Reports -->
+        <div class="tab-content" id="tab-reports" style="display: none;">
+          <div class="content-card">
+            <div class="card-header">
+              <h4 class="card-title">Foydalanuvchilar Shikoyatlari va Xatoliklar</h4>
+            </div>
+
+            <div class="data-table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Masjid</th>
+                    <th>Sababi</th>
+                    <th>Tafsilot</th>
+                    <th>Holati</th>
+                    <th>Harakatlar</th>
+                  </tr>
+                </thead>
+                <tbody id="reports-tbody">
+                  <!-- Rendered by admin.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: OpenStreetMap Sync -->
+        <div class="tab-content" id="tab-sync" style="display: none;">
+          <div class="content-card">
+            <div class="card-header">
+              <h4 class="card-title">OpenStreetMap (Overpass API) dan Global Import</h4>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+              Istalgan shahar koordinatalari va radiusini kiritib, OpenStreetMap xalqaro bazasidagi barcha musulmon ibodatxonalarini bir zumda Neon PostgreSQL bazasiga avtomatik yuklab olishingiz mumkin.
+            </p>
+
+            <div style="margin-bottom: 24px;">
+              <span style="font-size: 0.85rem; color: var(--text-dim); margin-right: 10px;">Tezkor Shaharlar:</span>
+              <button type="button" class="btn btn-secondary btn-sm sync-preset-btn" data-lat="41.311082" data-lng="69.240562">Toshkent</button>
+              <button type="button" class="btn btn-secondary btn-sm sync-preset-btn" data-lat="39.6547" data-lng="66.9758">Samarqand</button>
+              <button type="button" class="btn btn-secondary btn-sm sync-preset-btn" data-lat="39.7758" data-lng="64.4150">Buxoro</button>
+              <button type="button" class="btn btn-secondary btn-sm sync-preset-btn" data-lat="41.0054" data-lng="28.9768">Istanbul</button>
+              <button type="button" class="btn btn-secondary btn-sm sync-preset-btn" data-lat="25.2048" data-lng="55.2708">Dubay</button>
+            </div>
+
+            <form id="sync-form" style="max-width: 600px;">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="sync-lat">Kenglik (Latitude)</label>
+                  <input type="number" step="any" id="sync-lat" class="form-input" value="41.311082" required>
+                </div>
+                <div class="form-group">
+                  <label for="sync-lng">Uzunlik (Longitude)</label>
+                  <input type="number" step="any" id="sync-lng" class="form-input" value="69.240562" required>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                  <label for="sync-radius">Qidiruv Radiusi (Metr, 1000 - 25000)</label>
+                  <input type="number" id="sync-radius" class="form-input" value="10000" min="500" max="25000" required>
+                </div>
+              </div>
+
+              <div style="margin-top: 24px;">
+                <button type="submit" class="btn btn-primary" id="btn-sync-submit">
+                  Importni Boshlash
+                </button>
+              </div>
+            </form>
+
+            <div id="sync-result" style="display: none; margin-top: 20px; padding: 16px; border-radius: 8px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #34d399; font-size: 0.9rem;"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="/admin/admin.js" defer></script>
+</body>
+</html>

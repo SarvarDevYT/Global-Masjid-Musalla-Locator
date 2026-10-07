@@ -1,128 +1,135 @@
-# Global Masjid & Musalla Locator (Mobil Ilova & PostGIS Backend)
+# Global Masjid & Musalla Locator
 
-Butun dunyo bo‘ylab musulmonlar va sayohatchilar uchun mo‘ljallangan, yuqori tezlikda ishlovchi cross-platform mobil ilova (iOS & Android) hamda geofazoviy Neon PostgreSQL (PostGIS) backend tizimi.
+> **Dunyo bo‘ylab musulmonlar va sayohatchilar uchun mo‘ljallangan, ultra-tezkor mobil ilova, Vercel Serverless PostGIS API, Neon Cloud ma'lumotlar bazasi, S3 Object Storage, Admin Boshqaruv Paneli va Zamonaviy Landing Sahifasi.**
 
 ---
 
-## 🏗 Loyiha Strukturasi
+## 🌟 Loyiha Arxitekturasi
+
+Platforma 3 ta asosiy bo'g'indan iborat:
+1. **Flutter Mobil Ilovasi (`/mobile`):** iOS va Android uchun cross-platform ilova. Geofazoviy qidiruv, 100% offline-first kesh, real-vaqt Qibla kompasi, tahoratxona filtrlari va ko'p tillilik (UZ, EN, RU, AR, TR).
+2. **Neon Cloud & PostGIS Backend (`/backend`):** Node.js + Express arxitekturasi. Neon serverless PostgreSQL va PostGIS spatial indekslari (`ST_DWithin`, `ST_DistanceSphere`), Neon S3 Object Storage (rasmlar uchun) hamda OpenStreetMap Overpass integratsiyasi.
+3. **Vercel Serverless & Veb Portallar (`/backend/public`):**
+   - **Landing Sahifasi (`/`):** Mahsulot taqdimoti, jonli brauzer masjid qidiruvchisi (demo), QR kod va to'g'ridan-to'g'ri Android APK yuklab olish tugmasi.
+   - **Admin Boshqaruv Paneli (`/admin`):** Yangi masjidlarni tasdiqlash/moderatsiya, rasmlar yuklash, foydalanuvchilar shikoyatlarini ko'rish va OpenStreetMap dan hududlar bo'yicha masjidlarni bazaga import qilish.
+
+---
+
+## 📁 Kataloglar Strukturasi
 
 ```
 Global Masjid & Musalla Locator/
-├── backend/                       # Node.js + Express + Neon PostGIS Server
+├── vercel.json                    # Vercel Serverless deployment konfiguratsiyasi (Root)
+├── release/                       # Ishlab chiqarilgan tayyor Android APK fayllari
+│   └── Global_Masjid_Locator.apk
+│
+├── backend/                       # Node.js + Neon PostGIS Serverless Backend
+│   ├── api/
+│   │   └── index.js               # Vercel Serverless function kirish nuqtasi
+│   ├── public/                    # Veb interfeyslar (Vercel CDN / Static)
+│   │   ├── index.html             # Zamonaviy Landing Page (Jonli qidiruv & APK yuklash)
+│   │   ├── app.css & app.js       # Landing sahifasi stillari va jonli demo logikasi
+│   │   ├── admin/                 # Admin Boshqaruv Paneli
+│   │   │   ├── index.html         # Dashboard (Masjidlar, Moderatsiya, OSM Sync)
+│   │   │   ├── admin.css          # Dark glassmorphism admin stillari
+│   │   │   └── admin.js           # Admin paneli API ulanishlari va CSRF himoyasi
+│   │   └── downloads/             # Foydalanuvchilar yuklab olishi uchun APK papkasi
 │   ├── src/
-│   │   ├── config/                # Server & Muhit konfiguratsiyalari
-│   │   ├── db/                    # PostGIS schema.sql, migratsiyalar, urug' ma'lumotlari (seeds)
-│   │   ├── middleware/            # Xavfsizlik (Helmet, Rate Limiting), Zod validatsiyasi, Error handler
-│   │   ├── routes/                # Masjidlar (/nearby, /contribute, /report) va OSM sync (/sync/overpass)
-│   │   ├── services/              # OpenStreetMap Overpass API integratsiyasi
-│   │   ├── app.js                 # Express ilova sozlamalari
-│   │   └── server.js              # Serverni ishga tushirish
-│   ├── tests/                     # Haversine, geofazoviy saralash va API testlari
+│   │   ├── config/                # Muhit o'zgaruvchilari (Neon, S3, JWT, Admin hash)
+│   │   ├── db/                    # PostGIS schema.sql, seeds.js, spatial database.js
+│   │   ├── middleware/            # AdminAuth (JWT/bcrypt/CSRF), Validation (Zod), Security
+│   │   ├── routes/                # Mosques (/nearby, /contribute, /report), Admin, Upload
+│   │   ├── services/              # OpenStreetMap Overpass & Neon S3 Storage servislari
+│   │   ├── app.js                 # Express ilova sozlamalari (Helmet CSP, CORS, Rate Limit)
+│   │   └── server.js              # Lokal va serverless startup
+│   ├── tests/                     # Unit & Spatial avtotestlar
+│   ├── vercel.json                # Backend alohida deploy qilingandagi Vercel sozlamasi
 │   └── package.json
 │
-└── mobile/                        # Flutter Mobil Ilovasi (iOS & Android)
+└── mobile/                        # Flutter Mobil Ilovasi (Android & iOS)
     ├── lib/
-    │   ├── core/
-    │   │   ├── constants/         # AppColors, ApiConstants
-    │   │   ├── l10n/              # 5 ta tilda lokalizatsiya (UZ, EN, RU, AR, TR)
-    │   │   ├── theme/             # Material 3 Light & Dark mavzular
-    │   │   └── utils/             # Haversine, Qibla hisoblash formulalari, Tashqi xaritalar launcher
-    │   ├── data/
-    │   │   ├── models/            # MosqueModel
-    │   │   ├── repositories/      # Offline kesh (SharedPreferences) + API Repository
-    │   │   └── services/          # Geolocator, HTTP API va Overpass fallback
-    │   ├── providers/             # Riverpod State Notifiers (Location, Filters, Mosques, Theme, Locale)
-    │   ├── ui/
-    │   │   ├── screens/           # HomeScreen (Split View), QiblaScreen, AddMosqueScreen, SettingsScreen
-    │   │   └── widgets/           # MapWidget, MosqueCard, DetailSheet, AmenityChip, SkeletonLoader
-    │   └── main.dart              # Mobil ilova boshlang'ich nuqtasi
+    │   ├── core/                  # AppColors, ApiConstants, L10n (5 ta til), Qibla formulalari
+    │   ├── data/                  # MosqueModel, SharedPreferences Kesh, ApiService, Location
+    │   ├── providers/             # Riverpod State Notifiers
+    │   ├── ui/                    # HomeScreen (Split View), QiblaScreen, AddMosqueScreen, Settings
+    │   └── main.dart              # Mobil ilova kirish nuqtasi
     └── pubspec.yaml
 ```
 
 ---
 
-## ⚡ Neon Database (PostgreSQL + PostGIS) Bilan Ishlash
+## 🚀 Vercel-ga 1-Qadamda Deploy Qilish (Backendni Kompyuteringizda Yoqmasdan Ishlatish)
 
-Neon serverless PostgreSQL xizmati PostGIS kengaytmasini to'liq qo'llab-quvvatlaydi.
+Loyiha to'liq **Vercel Serverless** uchun optimallashtirilgan. Backend o'z kompyuteringizda ishlamasdan, Vercel bulutida tunu-kun 100% bepul ishlaydi!
 
-### 1-qadam: Neon loyihasini yaratish
-1. [Neon Console](https://console.neon.tech) oynasida loyiha nomini tanlang (masalan, `Masjid Locator`).
-2. **Region:** `AWS Europe Central 1 (Frankfurt)`
-3. **"Create project"** oq tugmasini bosing.
+### Deploy jarayoni:
+1. [Vercel Dashboard](https://vercel.com) ga kiring va **"Add New Project"** tugmasini bosing.
+2. `https://github.com/SarvarDevYT/Global-Masjid-Musalla-Locator` repozitoriyasini tanlang (**Import**).
+3. **Environment Variables** bo'limiga quyidagi kalitlarni kiriting:
 
-### 2-qadam: Connection Stringni `.env` faylga kiritish
-Neon loyiha yaratilgandan so'ng ekranda `Connection string` chiqadi. Uni nusxalab oling:
 ```env
-postgresql://neondb_owner:npg_xxxx@ep-xyz-123456.eu-central-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://neondb_owner:npg_j0mlIGTCi6Pc@ep-weathered-grass-b2rmpww4.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+DATABASE_URL_POOLED=postgresql://neondb_owner:npg_j0mlIGTCi6Pc@ep-weathered-grass-b2rmpww4-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+AWS_ENDPOINT_URL_S3=https://br-sparkling-bread-b25swc06.storage.c-6.eu-central-1.aws.neon.tech
+AWS_ACCESS_KEY_ID=nak_live_a9b075840ecf41de80f8f12939c49b58
+AWS_SECRET_ACCESS_KEY=nsk_live_9b0ca4edd2247469c1549918c897fdcc4d8a0e8b984d2de43f0d50099293a735
+AWS_REGION=eu-central-1
+S3_BUCKET=uploads
+
+ADMIN_PASSWORD_HASH=$2b$10$0Z8JfgSa1Nc1fO7MPmndxel/Iv0HaScYKtk94OZn3lz9yrwTgf3ki
+JWT_SECRET=5b726d9b967e5c76c3c7f2848691c93f708b8907eb499417eee85a46d52977c2
+NODE_ENV=production
 ```
 
-`backend` papkasidagi `.env` faylini oching va unga quyidagini yozing:
-```env
-DATABASE_URL=postgresql://neondb_owner:npg_xxxx@ep-xyz-123456.eu-central-1.aws.neon.tech/neondb?sslmode=require
-PORT=3000
-NODE_ENV=development
-```
+4. **"Deploy"** tugmasini bosing.
+5. Bir daqiqa ichida saytingiz va API tayyor bo'ladi:
+   - **Landing Sahifasi:** `https://sizning-domen.vercel.app/`
+   - **Admin Paneli:** `https://sizning-domen.vercel.app/admin`
+   - **API Salomatlik Holati:** `https://sizning-domen.vercel.app/api/v1/health`
 
-### 3-qadam: PostGIS sxemasini va dastlabki masjidlarni Neon bazasiga yuklash
-Terminalda `backend` papkasiga o'tib, bitta buyruqni ishga tushiring:
+---
+
+## 🛡️ Admin Boshqaruv Paneli (`/admin`)
+
+- **Standart Parol:** `admin2026`
+- **Imkoniyatlar:**
+  1. **Statistika Metrikalari:** Jami masjidlar soni, tasdiqlanganlar, kutilayotgan arizalar va xatolik shikoyatlari soni.
+  2. **Masjidlar Moderatsiyasi:** Har bir masjidni ko'rib chiqish, bir bosish bilan **Tasdiqlash** yoki **Rad etish**.
+  3. **Yangi Masjid Qo'shish:** Nomi, koordinatalari, barcha qulayliklar belgilari va Neon S3 bulutiga fotosurat yuklash.
+  4. **Foydalanuvchilar Shikoyatlari:** Yopilgan yoki xato kiritilgan joylarni tekshirish va hal etish.
+  5. **OpenStreetMap Sinxronizatsiyasi:** Istalgan shahar (Toshkent, Samarqand, Istanbul, Dubay va b.) koordinatasini tanlab, OSM Overpass API orqali yuzlab masjidlarni avtomatik bazaga yuklash.
+
+---
+
+## 📱 Mobil Ilova (Android APK)
+
+Ilova Android qurilmalar uchun to'liq yig'ilgan va `release/` hamda `backend/public/downloads/` kataloglariga joylashtirilgan.
+
+### APK ni o'rnatish:
+1. `release/Global_Masjid_Locator.apk` faylini telefoningizga o'tkazing (yoki landing sahifadagi "APK Yuklab Olish" orqali yuklang).
+2. Faylni oching va "O'rnatish" tugmasini bosing.
+3. Ilova GPS orqali birinchi soniyadayoq atrofingizdagi eng yaqin masjidlarni metr hisobida ko'rsatadi!
+
+---
+
+## 🧪 Sinov va Testlar
+
+Backend testlarini ishga tushirish:
 ```bash
 cd backend
-npm run migrate
+npm test
 ```
-Bu avtomatik ravishda:
-- `CREATE EXTENSION postgis;` ni yoqadi
-- `mosques` va `mosque_reports` jadvallarini yaratadi
-- Geofazoviy `SP-GIST` indeksini o'rnatadi
-- Boshlang'ich masjidlar ma'lumotlarini Neon bazasiga yuklaydi.
 
-### 4-qadam: Backend Serverni ishga tushirish
-```bash
-npm run dev
-```
-Server `http://localhost:3000` portida ishga tushadi:
-- **Salomatlik tekshiruvi:** `GET http://localhost:3000/api/v1/health`
-- **Yaqin masjidlar:** `GET http://localhost:3000/api/v1/mosques/nearby?lat=41.3381&lng=69.2415&radius=10000`
-
----
-
-## 📱 Flutter Mobil Ilovasini Ishga Tushirish
-
-Mobil ilova to'liq cross-platform (Android, iOS, Web, Windows).
-
+Mobil ilovani statik analiz qilish:
 ```bash
 cd mobile
-flutter run
-```
-
-Yoki brauzerda sinab ko'rish uchun:
-```bash
-flutter run -d chrome
+flutter analyze
 ```
 
 ---
 
-## 🕌 Asosiy Imkoniyatlar va Funksiyalar
+## 🤝 Litsenziya va Mualliflik
 
-1. **Avtomatik Geolokatsiya va Masofa Dvigateli (Core):**
-   - GPS ochilganda real masofani hisoblaydi (< 1 km bo'lsa metrda `350 m`, oshsa `2.4 km`).
-   - Eng yaqinidan uzog'iga tartiblash (Ascending sort).
-   - Xarita surilganda **"Ushbu hududdan qidirish"** tugmasi orqali yangi markaz bo'yicha tezkor qidiruv.
-2. **Qulaylik Filtrlari (Amenities):**
-   - Tahoratxona (Erkaklar / Ayollar)
-   - Ayollar namozxonasi
-   - Juma namozi bor/yo'qligi
-   - Nogironlar aravachasi (Wheelchair accessibility)
-   - Avtoturargoh (Parking)
-3. **Tashqi Navigatsiya Integratsiyasi:**
-   - "Borish" tugmasi bosilganda: Google Maps, Apple Maps, Yandex Maps, 2GIS va Waze tanlov oynasi.
-4. **Oflayn Rejim va Qibla Kompasi:**
-   - 15-30 km radiusdagi masjidlar lokal keshlanadi va internet o'chganda ham oflayn GPS orqali masofani hisoblab turadi.
-   - Magnetometer sensori orqali real vaqtda Ka'baga yo'naltiruvchi o'rnatilgan **Qibla Kompasi**.
-5. **Crowdsourcing va Jamiyat Tahriri:**
-   - Yangi masjid yoki namozxona qo'shish ekrani (status: `pending`).
-   - Xato ma'lumotlar ustidan shikoyat yuborish (Report modal).
-6. **Zamonaviy UI/UX:**
-   - Split View (Yuqorida OpenStreetMap, pastda suriluvchi Draggable Sheet).
-   - Skeleton Loaderlar.
-   - Dark / Light rejimi.
-   - 5 ta tilda to'liq qo'llab-quvvatlash (O'zbek, Ingliz, Rus, Arab, Turk).
+Loyiha butun dunyo musulmonlari uchun ochiq va bepul asosda yaratilgan.
+OpenStreetMap® ma'lumotlari [ODbL](https://opendatacommons.org/licenses/odbl/) litsenziyasi asosida taqdim etiladi.

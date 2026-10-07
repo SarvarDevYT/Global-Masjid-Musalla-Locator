@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Masjid & Musalla Locator — Dunyo bo'ylab eng yaqin masjidlar</title>
+  <meta name="description" content="GPS koordinatangiz bo'yicha eng yaqin masjid va namozxonalarni soniyalar ichida aniq masofa, tahoratxona qulayliklari, qibla va navigatsiya bilan toping.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="nav-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2C10.5 4.5 9 7 9 9.5C9 10.5 9.3 11.4 9.8 12.2C8.7 12.7 8 13.8 8 15V21H16V15C16 13.8 15.3 12.7 14.2 12.2C14.7 11.4 15 10.5 15 9.5C15 7 13.5 4.5 12 2ZM6 16V21H4V16C4 14.9 4.9 14 6 14V16ZM18 14C19.1 14 20 14.9 20 16V21H18V14Z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Masjid Locator</h1>
+          <p>Global Musalla Finder</p>
+        </div>
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#demo" class="nav-link">Jonli Qidiruv</a></li>
+          <li><a href="#features" class="nav-link">Imkoniyatlar</a></li>
+          <li><a href="#technology" class="nav-link">Texnologiya</a></li>
+          <li><a href="#download" class="nav-link">Yuklab Olish</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="/admin" class="btn btn-secondary btn-sm" id="nav-admin-btn">
+          <span>🛡️ Admin Panel</span>
+        </a>
+        <a href="#download" class="btn btn-primary btn-sm">
+          <span>📥 APK Yuklash</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span>✨ 100% Bepul • PostGIS & Neon Cloud Texnologiyasi</span>
+        </div>
+        <h2 class="hero-title">
+          Dunyoning Har Qadamida <span>Masjidingizni</span> Bir Soniyada Toping
+        </h2>
+        <p class="hero-desc">
+          Foydalanuvchi ilovani ochgan soniyadayoq uning GPS koordinatalari bo‘yicha eng yaqin masjid va namozxonalarni real masofasi (metr/km) bilan ko‘rsatuvchi, qulayliklar bo‘yicha saralovchi va qibla yo‘nalishini ta'minlovchi ultra-tezkor platforma.
+        </p>
+
+        <div class="hero-ctas">
+          <a href="#download" class="btn btn-primary btn-lg">
+            <span>📥 Android APK Yuklab Olish (v1.0.0)</span>
+          </a>
+          <a href="#demo" class="btn btn-secondary btn-lg">
+            <span>🧭 Jonli Sinab Ko'rish</span>
+          </a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <h3>&lt; 15 ms</h3>
+            <p>Spatial qidiruv tezligi</p>
+          </div>
+          <div class="stat-item">
+            <h3>100%</h3>
+            <p>Offline-First kesh</p>
+          </div>
+          <div class="stat-item">
+            <h3>100K+</h3>
+            <p>Global masjidlar bazasi</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone Visual Mockup -->
+      <div class="mockup-container">
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-header">
+              <span class="phone-header-title">Yaqin Masjidlar</span>
+              <span style="font-size: 0.75rem; color: #10b981;">● GPS Faol</span>
+            </div>
+
+            <!-- Radar Area -->
+            <div class="phone-radar">
+              <div class="radar-circle radar-circle-1"></div>
+              <div class="radar-circle radar-circle-2"></div>
+              <div class="radar-circle radar-circle-3"></div>
+              <div class="radar-sweep"></div>
+              
+              <!-- Radar Pins -->
+              <div class="radar-pin user" title="Siz"></div>
+              <div class="radar-pin pin-1" title="Hazrati Imom"></div>
+              <div class="radar-pin pin-2" title="Minor Masjidi"></div>
+              <div class="radar-pin pin-3" title="Ko'kcha Masjidi"></div>
+            </div>
+
+            <!-- Cards preview -->
+            <div class="phone-card">
+              <div class="phone-card-title">Hazrati Imom (Hastimom)</div>
+              <div class="phone-card-sub">Qorasaroy ko'chasi, Olmazor tumani</div>
+              <div class="phone-card-meta">
+                <span class="badge-distance">📍 350 metr</span>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">💧 Tahoratxona bor</span>
+              </div>
+            </div>
+
+            <div class="phone-card" style="opacity: 0.85;">
+              <div class="phone-card-title">Minor Jome Masjidi</div>
+              <div class="phone-card-sub">Kichik halqa yo'li, Yunusobod</div>
+              <div class="phone-card-meta">
+                <span class="badge-distance">📍 1.2 km</span>
+                <span style="font-size: 0.7rem; color: #a7f3d0;">🧕 Ayollar zali bor</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Live Finder Demo -->
+  <section class="section section-alt" id="demo">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Jonli Test</span>
+        <h3 class="section-title">Brauzerda Jonli Masjid Qidiruvi</h3>
+        <p class="section-desc">
+          Pastdagi tugma orqali GPS joylashuvingizni aniqlang yoki dunyo shaharlaridan birini tanlab, backend qidiruv tezligini sinab ko'ring.
+        </p>
+      </div>
+
+      <div class="demo-box">
+        <div class="demo-controls">
+          <div class="demo-pills">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-gps-locate">
+              📍 GPS Orqali Aniqlash
+            </button>
+            <button type="button" class="pill-btn active" data-preset="tashkent">Toshkent</button>
+            <button type="button" class="pill-btn" data-preset="samarkand">Samarqand</button>
+            <button type="button" class="pill-btn" data-preset="bukhara">Buxoro</button>
+            <button type="button" class="pill-btn" data-preset="istanbul">Istanbul</button>
+            <button type="button" class="pill-btn" data-preset="mecca">Makkah</button>
+          </div>
+
+          <div class="search-input-wrapper">
+            <svg class="search-icon" viewBox="0 0 24 24">
+              <path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z"/>
+            </svg>
+            <input type="text" id="demo-search" class="search-input" placeholder="Masjid nomi bo'yicha filter...">
+          </div>
+        </div>
+
+        <div class="demo-results-grid" id="demo-results">
+          <!-- Populated dynamically via app.js -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Xususiyatlar</span>
+        <h3 class="section-title">Har Bir Musulmon Uchun Mukammal Qulaylik</h3>
+        <p class="section-desc">
+          Biz ibodat amallarini o'z vaqtida va to'liq ado etishingiz uchun zarur bo'lgan barcha imkoniyatlarni bitta ixcham ilovaga jamladik.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/></svg>
+          </div>
+          <h4 class="feature-title">Ultra-Tezkor Spatial Qidiruv</h4>
+          <p class="feature-text">
+            PostGIS spatial indekslari va Haversine formulasi bilan soniyaning yuzdan bir ulushida eng yaqin masjidlarni metr hisobida aniqlaydi.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M12 2.69L17.66 8.35C20.78 11.47 20.78 16.53 17.66 19.65C14.54 22.77 9.48 22.77 6.36 19.65C3.24 16.53 3.24 11.47 6.36 8.35L12 2.69Z"/></svg>
+          </div>
+          <h4 class="feature-title">Tahoratxona & Ayollar Zali</h4>
+          <p class="feature-text">
+            Erkaklar va ayollar uchun alohida tahoratxona, ayollar namozxonasi, avtoturargoh va aravachalar kirishi bor-yo'qligini ko'rsatadi.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M12 10.9C11.39 10.9 10.9 11.39 10.9 12C10.9 12.61 11.39 13.1 12 13.1C12.61 13.1 13.1 12.61 13.1 12C13.1 11.39 12.61 10.9 12 10.9ZM12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM14.19 14.19L6 18L9.81 9.81L18 6L14.19 14.19Z"/></svg>
+          </div>
+          <h4 class="feature-title">Aniq Qibla Kompasi</h4>
+          <p class="feature-text">
+            Qurilmaning raqamli magnitometri yordamida Ka'ba koordinatalari sari aniq burilish burchagini interaktiv silliq kompasda ko'rsatadi.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z"/></svg>
+          </div>
+          <h4 class="feature-title">100% Offline-First Kesh</h4>
+          <p class="feature-text">
+            Internet yo'q bo'lgan taqdirda ham, ilgari keshga olingan xarita va masjidlar doim siz bilan. Safarda va yo'lda uzilishlarsiz ishlaydi.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM11 19.93C7.05 19.44 4 16.08 4 12C4 11.38 4.08 10.79 4.21 10.21L9 15V16C9 17.1 9.9 18 11 18V19.93ZM17.9 17.39C17.64 16.58 16.9 16 16 16H15V13C15 12.45 14.55 12 14 12H8V10H10C10.55 10 11 9.55 11 9V7H13C14.1 7 15 6.1 15 5V4.59C17.93 5.78 20 8.65 20 12C20 14.08 19.2 15.97 17.9 17.39Z"/></svg>
+          </div>
+          <h4 class="feature-title">OpenStreetMap & Neon Baza</h4>
+          <p class="feature-text">
+            Dunyo bo'yicha millionlab ko'ngillilar yangilab boradigan ochiq xarita ma'lumotlari bilan bog'langan ishonchli bulutli arxitektura.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M16 11C17.66 11 18.99 9.66 18.99 8C18.99 6.34 17.66 5 16 5C14.34 5 13 6.34 13 8C13 9.66 14.34 11 16 11ZM8 11C9.66 11 10.99 9.66 10.99 8C10.99 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11ZM8 13C5.67 13 1 14.17 1 16.5V19H15V16.5C15 14.17 10.33 13 8 13ZM16 13C15.71 13 15.38 13.02 15.03 13.05C16.19 13.89 17 15.02 17 16.5V19H23V16.5C23 14.17 18.33 13 16 13Z"/></svg>
+          </div>
+          <h4 class="feature-title">Musulmonlar Hamjamiyati</h4>
+          <p class="feature-text">
+            Yangi topilgan namozxona yoki masjidni 1 daqiqada rasm va koordinatalari bilan qo'shing va boshqa qardoshlarga yordam bering.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download APK Section -->
+  <section class="section section-alt" id="download">
+    <div class="container">
+      <div class="download-card">
+        <div class="download-info">
+          <h2>Ilovani Hozir O'rnating</h2>
+          <p>
+            Eng yaqin masjidlarni qidirish, qibla tomon burilish va tahoratxona qulayliklaridan foydalanish uchun Android qurilmangizga to'g'ridan-to'g'ri APK faylni yuklab oling.
+          </p>
+
+          <div class="download-specs">
+            <div class="spec-badge">
+              <span>📱 Android 7.0+</span>
+            </div>
+            <div class="spec-badge">
+              <span>📦 Versiya 1.0.0</span>
+            </div>
+            <div class="spec-badge">
+              <span>🛡️ 100% Xavfsiz & Bepul</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+            <a href="/downloads/app-release.apk" download="Global_Masjid_Locator.apk" class="btn btn-gold btn-lg">
+              <span>⬇️ Android APK Yuklab Olish (Yuklash)</span>
+            </a>
+            <a href="/admin" class="btn btn-secondary btn-lg">
+              <span>⚙️ Admin Boshqaruv Paneli</span>
+            </a>
+          </div>
+
+          <p style="font-size: 0.8rem; color: #9ca3af; margin-top: 18px;">
+            * Eslatma: Brauzer orqali yuklanganda "Noma'lum manbalardan o'rnatish"ga ruxsat bering.
+          </p>
+        </div>
+
+        <div class="qr-box">
+          <div id="qr-canvas-container">
+            <!-- Rendered by app.js -->
+          </div>
+          <p>Telefon kamerasi orqali skaner qilib yuklang</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="nav-brand" style="margin-bottom: 16px;">
+            <div class="brand-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 2C10.5 4.5 9 7 9 9.5C9 10.5 9.3 11.4 9.8 12.2C8.7 12.7 8 13.8 8 15V21H16V15C16 13.8 15.3 12.7 14.2 12.2C14.7 11.4 15 10.5 15 9.5C15 7 13.5 4.5 12 2ZM6 16V21H4V16C4 14.9 4.9 14 6 14V16ZM18 14C19.1 14 20 14.9 20 16V21H18V14Z"/>
+              </svg>
+            </div>
+            <div class="brand-text">
+              <h1>Masjid Locator</h1>
+              <p>Global Musalla Finder</p>
+            </div>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
+            Dunyo bo‘ylab musulmonlar va sayohatchilar uchun mo‘ljallangan ochiq kodli va tezkor masjid qidiruv platformasi.
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Sahifalar</h4>
+          <ul>
+            <li><a href="#demo">Jonli Xarita</a></li>
+            <li><a href="#features">Imkoniyatlar</a></li>
+            <li><a href="#download">APK Yuklash</a></li>
+            <li><a href="/admin">Admin Tizimi</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>API Servislar</h4>
+          <ul>
+            <li><a href="/api/v1/health">API Salomatlik holati</a></li>
+            <li><a href="/api/v1/mosques/nearby?lat=41.3364&lng=69.2398">Yaqin Masjidlar API</a></li>
+            <li><a href="https://overpass-api.de/" target="_blank" rel="noopener">OpenStreetMap Overpass</a></li>
+            <li><a href="https://neon.tech/" target="_blank" rel="noopener">Neon PostgreSQL & S3</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Loyiha Haqida</h4>
+          <ul>
+            <li><a href="https://github.com/SarvarDevYT/Global-Masjid-Musalla-Locator" target="_blank" rel="noopener">GitHub Repozitoriy</a></li>
+            <li><a href="#">Xavfsizlik & Maxfiylik</a></li>
+            <li><a href="#">Ochiq Ma'lumotlar</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          © 2026 Global Masjid & Musalla Locator. Barcha huquqlar himoyalangan.
+        </div>
+        <div class="status-badge">
+          <span class="status-dot" id="server-status-dot"></span>
+          <span id="server-status-text">Server holati tekshirilmoqda...</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
