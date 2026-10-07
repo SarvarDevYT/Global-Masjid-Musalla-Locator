@@ -122,8 +122,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
   background: rgba(5, 13, 10, 0.82);
   border-bottom: 1px solid var(--border-emerald);
   transition: var(--transition-smooth);
@@ -233,6 +233,7 @@ body {
   cursor: pointer;
   border: 1px solid transparent;
   transition: var(--transition-smooth);
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -253,6 +254,7 @@ body {
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid var(--border-emerald);
   color: var(--text-pure);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }
 
@@ -744,6 +746,7 @@ body {
   padding: 40px 32px;
   position: relative;
   transition: var(--transition-smooth);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 
@@ -796,6 +799,7 @@ body {
   border-radius: var(--radius-lg);
   padding: 38px 32px;
   transition: var(--transition-smooth);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   position: relative;
 }
@@ -844,6 +848,7 @@ body {
   border: 1px solid var(--border-emerald);
   border-radius: var(--radius-xl);
   padding: 40px;
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(16, 185, 129, 0.12);
 }
@@ -1293,4 +1298,12 @@ body {
   .download-info h2 {
     font-size: 2.1rem;
   }
+}
+
+.phone-card-secondary {
+  opacity: 0.92;
+}
+
+.footer-brand {
+  margin-bottom: 18px;
 }
