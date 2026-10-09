@@ -92,6 +92,31 @@ class ApiService {
     return await _fetchFromOverpass(lat: lat, lng: lng, radiusMeters: radiusMeters);
   }
 
+  /// Butun O'zbekistondagi barcha masjidlarni serverdan olish (Xarita uchun)
+  Future<List<MosqueModel>> fetchAllMosques({String? type}) async {
+    final queryParams = {
+      if (type != null && type != 'all') 'type': type,
+      'limit': '3000',
+    };
+    final uri = Uri.parse('${ApiConstants.defaultBaseUrl}/mosques/all').replace(queryParameters: queryParams);
+
+    try {
+      final response = await _client.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          final list = (data['data'] as List)
+              .map((item) => MosqueModel.fromJson(item))
+              .toList();
+          if (list.isNotEmpty) return list;
+        }
+      }
+    } catch (_) {
+      // Offline or backend not reached
+    }
+    return [];
+  }
+
   Future<List<MosqueModel>> _fetchFromOverpass({
     required double lat,
     required double lng,

@@ -177,5 +177,49 @@ class MosquesListNotifier extends AsyncNotifier<List<MosqueModel>> {
   }
 }
 
+// All mosques across Uzbekistan provider (for full nationwide map & search)
+final allMosquesProvider = AsyncNotifierProvider<AllMosquesNotifier, List<MosqueModel>>(() {
+  return AllMosquesNotifier();
+});
+
+class AllMosquesNotifier extends AsyncNotifier<List<MosqueModel>> {
+  LatLng? _overrideCenter;
+
+  @override
+  Future<List<MosqueModel>> build() async {
+    final locationAsync = ref.watch(userLocationProvider);
+    final filters = ref.watch(filtersProvider);
+    final repo = ref.watch(mosqueRepositoryProvider);
+
+    final LatLng? center = _overrideCenter ?? locationAsync.value;
+
+    return await repo.getAllMosques(
+      userLat: center?.latitude,
+      userLng: center?.longitude,
+      type: filters.type,
+      query: filters.searchQuery,
+      hasWuduWomen: filters.hasWuduWomen,
+      hasWomenPrayerArea: filters.hasWomenPrayerArea,
+      hasJuma: filters.hasJuma,
+      hasWheelchairAccess: filters.hasWheelchairAccess,
+      hasParking: filters.hasParking,
+    );
+  }
+
+  void setCenter(LatLng center) {
+    _overrideCenter = center;
+    ref.invalidateSelf();
+  }
+
+  void resetToUserLocation() {
+    _overrideCenter = null;
+    ref.invalidateSelf();
+  }
+
+  Future<void> refresh() async {
+    ref.invalidateSelf();
+  }
+}
+
 // Active Bottom Navigation Tab index provider (0: Home, 1: Map, 2: Qibla, 3: Settings)
 final currentTabProvider = StateProvider<int>((ref) => 0);

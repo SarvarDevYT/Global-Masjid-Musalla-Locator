@@ -4,6 +4,7 @@ const overpassService = require('../services/overpassService');
 const {
   idParamSchema,
   nearbyQuerySchema,
+  bboxQuerySchema,
   scanSyncSchema,
   contributeSchema,
   reportSchema,
@@ -11,6 +12,42 @@ const {
 } = require('../middleware/validation');
 
 const router = express.Router();
+
+/**
+ * GET /api/v1/mosques/all
+ * Butun O'zbekistondagi barcha tasdiqlangan masjidlar va namozxonalar (xarita uchun)
+ */
+router.get('/all', async (req, res, next) => {
+  try {
+    const type = req.query.type;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 3000, 5000);
+    const mosques = await dbManager.getAllApproved({ limit, type });
+    res.json({ success: true, count: mosques.length, data: mosques });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/v1/mosques/bbox
+ * Xaritada ko'rinayotgan koordinatalar to'rtburchagi (Bounding Box) bo'yicha qidiruv
+ */
+router.get('/bbox', validate(bboxQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    const { min_lat, max_lat, min_lng, max_lng, type, limit } = req.validated;
+    const mosques = await dbManager.findByBBox({
+      minLat: min_lat,
+      maxLat: max_lat,
+      minLng: min_lng,
+      maxLng: max_lng,
+      limit,
+      type
+    });
+    res.json({ success: true, count: mosques.length, data: mosques });
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * GET /api/v1/mosques/nearby

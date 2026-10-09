@@ -48,7 +48,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   void _searchThisArea() {
     if (_currentCenter != null) {
-      ref.read(mosquesListProvider.notifier).searchInCustomArea(_currentCenter!);
+      ref.read(allMosquesProvider.notifier).setCenter(_currentCenter!);
       setState(() => _showSearchAreaButton = false);
     }
   }
@@ -67,14 +67,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final userLoc = ref.read(userLocationProvider).value;
     if (userLoc != null) {
       _mapController.move(userLoc, 15.0);
-      await ref.read(mosquesListProvider.notifier).searchInCustomArea(userLoc);
+      ref.read(allMosquesProvider.notifier).resetToUserLocation();
       setState(() => _showSearchAreaButton = false);
       if (mounted) {
-        final count = ref.read(mosquesListProvider).value?.length ?? 0;
+        final count = ref.read(allMosquesProvider).value?.length ?? 0;
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ $count ta yaqin masjid ko\'rsatildi'),
+            content: Text('✅ $count ta masjid xaritada mavjud'),
             duration: const Duration(seconds: 2),
             backgroundColor: const Color(0xFF059669),
           ),
@@ -87,7 +87,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
     final userLocationAsync = ref.watch(userLocationProvider);
-    final mosquesAsync = ref.watch(mosquesListProvider);
+    final mosquesAsync = ref.watch(allMosquesProvider);
     final filters = ref.watch(filtersProvider);
     final selectedMosque = ref.watch(selectedMosqueProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -169,6 +169,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
+                      onChanged: (val) {
+                        ref.read(filtersProvider.notifier).setSearchQuery(val.trim());
+                      },
                       onSubmitted: (val) {
                         ref.read(filtersProvider.notifier).setSearchQuery(val.trim());
                       },

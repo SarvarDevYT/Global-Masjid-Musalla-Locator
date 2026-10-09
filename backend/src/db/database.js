@@ -212,6 +212,68 @@ class DatabaseManager {
     return results.slice(offset, offset + limit);
   }
 
+  // Butun O'zbekistondagi barcha tasdiqlangan masjidlarni olish (Xarita uchun)
+  async getAllApproved({ limit = 3000, type } = {}) {
+    if (this.isPostgresConnected) {
+      const params = ['approved'];
+      let where = 'WHERE status = $1';
+      if (type && type !== 'all') {
+        params.push(type);
+        where += ` AND type = $${params.length}`;
+      }
+      params.push(limit);
+      const res = await this.pool.query(
+        `SELECT id, osm_id, name, alt_name, address, city, country, type,
+                ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng,
+                has_wudu_men, has_wudu_women, has_women_prayer_area,
+                has_juma, has_wheelchair_access, has_parking, photo_url, status, verified_count
+         FROM mosques
+         ${where}
+         ORDER BY verified_count DESC, name ASC
+         LIMIT $${params.length}`,
+        params
+      );
+      return res.rows.map(r => ({ ...r, lat: parseFloat(r.lat), lng: parseFloat(r.lng) }));
+    }
+
+    return this.memoryMosques
+      .filter(m => m.status === 'approved' && (!type || type === 'all' || m.type === type))
+      .slice(0, limit);
+  }
+
+  // Xaritada ko'rinib turgan hudud (Bounding Box) bo'yicha masjidlarni olish
+  async findByBBox({ minLat, maxLat, minLng, maxLng, limit = 1500, type } = {}) {
+    if (this.isPostgresConnected) {
+      const params = [minLng, minLat, maxLng, maxLat, 'approved'];
+      let where = `WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326) AND status = $5`;
+      if (type && type !== 'all') {
+        params.push(type);
+        where += ` AND type = $${params.length}`;
+      }
+      params.push(limit);
+      const res = await this.pool.query(
+        `SELECT id, osm_id, name, alt_name, address, city, country, type,
+                ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng,
+                has_wudu_men, has_wudu_women, has_women_prayer_area,
+                has_juma, has_wheelchair_access, has_parking, photo_url, status, verified_count
+         FROM mosques
+         ${where}
+         LIMIT $${params.length}`,
+        params
+      );
+      return res.rows.map(r => ({ ...r, lat: parseFloat(r.lat), lng: parseFloat(r.lng) }));
+    }
+
+    return this.memoryMosques
+      .filter(m =>
+        m.status === 'approved' &&
+        m.lat >= minLat && m.lat <= maxLat &&
+        m.lng >= minLng && m.lng <= maxLng &&
+        (!type || type === 'all' || m.type === type)
+      )
+      .slice(0, limit);
+  }
+
   // onlyApproved: ommaviy API faqat tasdiqlangan joylarni qaytaradi (pending/rejected yashirin)
   async getById(id, { onlyApproved = false } = {}) {
     if (this.isPostgresConnected) {

@@ -10,7 +10,7 @@ const idParamSchema = z.object({
 const nearbyQuerySchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
-  radius: z.coerce.number().positive().max(100000).default(10000), // Default 10km, max 100km
+  radius: z.coerce.number().positive().max(2000000).default(25000), // Default 25km, max 2000km to cover all Uzbekistan
   type: z.enum(['masjid', 'musalla']).optional(),
   q: z.string().trim().max(100).optional(),
   has_wudu_women: boolFlag.optional(),
@@ -18,8 +18,17 @@ const nearbyQuerySchema = z.object({
   has_juma: boolFlag.optional(),
   has_wheelchair_access: boolFlag.optional(),
   has_parking: boolFlag.optional(),
-  limit: z.coerce.number().int().positive().max(100).default(50),
+  limit: z.coerce.number().int().positive().max(3000).default(50),
   offset: z.coerce.number().int().nonnegative().default(0)
+});
+
+const bboxQuerySchema = z.object({
+  min_lat: z.coerce.number().min(-90).max(90),
+  max_lat: z.coerce.number().min(-90).max(90),
+  min_lng: z.coerce.number().min(-180).max(180),
+  max_lng: z.coerce.number().min(-180).max(180),
+  type: z.enum(['masjid', 'musalla']).optional(),
+  limit: z.coerce.number().int().positive().max(3000).default(1500)
 });
 
 const contributeSchema = z.object({
@@ -98,6 +107,7 @@ const validate = (schema, source = 'query') => (req, res, next) => {
 module.exports = {
   idParamSchema,
   nearbyQuerySchema,
+  bboxQuerySchema,
   contributeSchema,
   reportSchema,
   moderationSchema,
