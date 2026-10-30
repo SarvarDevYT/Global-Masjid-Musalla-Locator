@@ -17,7 +17,7 @@ class QiblaScreen extends ConsumerStatefulWidget {
 }
 
 class _QiblaScreenState extends ConsumerState<QiblaScreen> {
-  double _qiblaBearing = 0.0;
+  double _qiblaBearing = 230.0;
 
   @override
   void initState() {
@@ -31,24 +31,76 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
     _qiblaBearing = GeoUtils.calculateQiblaBearing(loc.latitude, loc.longitude);
   }
 
+  String _getDirectionDescription(double bearing, String locale) {
+    // 0 = N, 90 = E, 180 = S, 270 = W
+    final b = (bearing % 360 + 360) % 360;
+    if (b >= 202.5 && b < 247.5) {
+      return locale == 'en'
+          ? 'south-west'
+          : (locale == 'ru' ? 'юго-запад' : 'janubi-g\'arb');
+    } else if (b >= 157.5 && b < 202.5) {
+      return locale == 'en'
+          ? 'south'
+          : (locale == 'ru' ? 'юг' : 'janub');
+    } else if (b >= 247.5 && b < 292.5) {
+      return locale == 'en'
+          ? 'west'
+          : (locale == 'ru' ? 'запад' : 'g\'arb');
+    } else if (b >= 112.5 && b < 157.5) {
+      return locale == 'en'
+          ? 'south-east'
+          : (locale == 'ru' ? 'юго-восток' : 'janubi-sharq');
+    } else if (b >= 67.5 && b < 112.5) {
+      return locale == 'en'
+          ? 'east'
+          : (locale == 'ru' ? 'восток' : 'sharq');
+    } else if (b >= 22.5 && b < 67.5) {
+      return locale == 'en'
+          ? 'north-east'
+          : (locale == 'ru' ? 'северо-восток' : 'shimoli-sharq');
+    } else if (b >= 292.5 && b < 337.5) {
+      return locale == 'en'
+          ? 'north-west'
+          : (locale == 'ru' ? 'северо-запад' : 'shimoli-g\'arb');
+    } else {
+      return locale == 'en'
+          ? 'north'
+          : (locale == 'ru' ? 'север' : 'shimol');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Qibla screen uses deep dark night palette as shown in PDF Page 4
+    const bgDark = Color(0xFF061518);
+    const cardDark = Color(0xFF0C2126);
+    const cardBorder = Color(0xFF153940);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: bgDark,
       appBar: AppBar(
-        title: Text(
-          AppTranslations.get('qibla_compass', locale),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-            height: 1,
-          ),
+        backgroundColor: bgDark,
+        elevation: 0,
+        centerTitle: true,
+        title: Column(
+          children: [
+            Text(
+              AppTranslations.get('qibla_compass', locale),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            Text(
+              AppTranslations.get('kaba_direction', locale),
+              style: const TextStyle(
+                color: Color(0xFF8BA69C),
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
       ),
       body: SafeArea(
@@ -57,308 +109,249 @@ class _QiblaScreenState extends ConsumerState<QiblaScreen> {
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return Center(
-                child: Text('Sensor xatosi: ${snapshot.error}'),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    '${AppTranslations.get('error_network', locale)}\n(${snapshot.error})',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                ),
               );
             }
 
             final double? heading = snapshot.data?.heading;
-            final double diff = heading != null ? ((heading - _qiblaBearing).abs()) % 360 : 180.0;
-            final bool isFacingQibla = diff < 4.0 || diff > 356.0;
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Top Info Card (Islamic Gold & Emerald)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 24),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isFacingQibla
-                            ? AppColors.gold
-                            : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-                        width: isFacingQibla ? 1.8 : 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isFacingQibla ? AppColors.gold : AppColors.primary)
-                              .withValues(alpha: isDark ? 0.25 : 0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.mosque, size: 14, color: AppColors.gold),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Qibla (Ka\'ba)',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${_qiblaBearing.round()}°',
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.gold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              height: 38,
-                              width: 1,
-                              color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-                            ),
-                            Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.explore, size: 14, color: AppColors.primary),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Kompas',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  heading != null ? '${heading.round()}°' : '---',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: isFacingQibla ? AppColors.primary : (isDark ? Colors.white : Colors.black87),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        if (isFacingQibla) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              gradient: AppColors.goldGradient,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.check_circle, size: 16, color: Colors.black87),
-                                SizedBox(width: 6),
-                                Text(
-                                  '✨ Qiblaga to\'g\'rilandi! (Ka\'ba tomoni)',
-                                  style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+            // Mathematical calculation fixing 0°/360° boundary:
+            // angleDiff = min(|h - qibla| % 360, 360 - (|h - qibla| % 360))
+            final double rawDiff = heading != null ? ((heading - _qiblaBearing).abs()) % 360.0 : 180.0;
+            final double angleDiff = math.min(rawDiff, 360.0 - rawDiff);
+            final bool isFacingQibla = angleDiff <= 5.0;
 
-                  const SizedBox(height: 36),
+            final String dirDesc = _getDirectionDescription(_qiblaBearing, locale);
 
-                  // Islamic Astrolabe Compass Dial
-                  Center(
-                    child: SizedBox(
-                      width: 290,
-                      height: 290,
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // --- COMPASS DIAL ---
+                    SizedBox(
+                      width: 280,
+                      height: 280,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Outer Astrolabe Gold Ring Aura
-                          Container(
-                            width: 290,
-                            height: 290,
+                          // Outer glow when aligned with Qibla
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: 270,
+                            height: 270,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: RadialGradient(
-                                colors: [
-                                  (isFacingQibla ? AppColors.gold : AppColors.primary).withValues(alpha: 0.15),
-                                  Colors.transparent,
-                                ],
-                              ),
+                              color: isFacingQibla
+                                  ? AppColors.primary.withValues(alpha: 0.18)
+                                  : Colors.transparent,
+                              boxShadow: isFacingQibla
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.primary.withValues(alpha: 0.5),
+                                        blurRadius: 36,
+                                        spreadRadius: 6,
+                                      ),
+                                    ]
+                                  : null,
                             ),
                           ),
 
-                          // Compass Base Rotating Dial
-                          Transform.rotate(
-                            angle: heading != null ? -((heading * math.pi) / 180) : 0,
-                            child: Container(
-                              width: 270,
-                              height: 270,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isDark ? AppColors.darkCard : Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (isFacingQibla ? AppColors.gold : AppColors.primary).withValues(alpha: 0.2),
-                                    blurRadius: 28,
-                                    spreadRadius: 3,
+                          // Compass Ring
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            width: 250,
+                            height: 250,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: cardDark,
+                              border: Border.all(
+                                color: isFacingQibla ? AppColors.primaryLight : cardBorder,
+                                width: isFacingQibla ? 3.0 : 2.0,
+                              ),
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Cardinal Direction Letters (N, E, S, W)
+                                const Positioned(
+                                  top: 14,
+                                  child: Text(
+                                    'N',
+                                    style: TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
-                                ],
-                                border: Border.all(
-                                  color: isFacingQibla ? AppColors.gold : AppColors.primary.withValues(alpha: 0.4),
-                                  width: 4,
                                 ),
-                              ),
-                              child: Stack(
-                                children: [
-                                  // N, E, S, W labels
-                                  const Align(
-                                    alignment: Alignment.topCenter,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(10.0),
-                                      child: Text(
-                                        'N',
-                                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14),
-                                      ),
+                                const Positioned(
+                                  right: 16,
+                                  child: Text(
+                                    'E',
+                                    style: TextStyle(
+                                      color: Color(0xFF8BA69C),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
                                     ),
                                   ),
-                                  const Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(10.0),
-                                      child: Text(
-                                        'S',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                      ),
+                                ),
+                                const Positioned(
+                                  bottom: 14,
+                                  child: Text(
+                                    'S',
+                                    style: TextStyle(
+                                      color: Color(0xFF8BA69C),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
                                     ),
                                   ),
-                                  const Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(10.0),
-                                      child: Text(
-                                        'W',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                      ),
+                                ),
+                                const Positioned(
+                                  left: 16,
+                                  child: Text(
+                                    'W',
+                                    style: TextStyle(
+                                      color: Color(0xFF8BA69C),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
                                     ),
                                   ),
-                                  const Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(10.0),
-                                      child: Text(
-                                        'E',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                      ),
-                                    ),
-                                  ),
+                                ),
 
-                                  // Ka'bah indicator on dial ring (Gold Crescent & Mosque badge)
-                                  Transform.rotate(
-                                    angle: (_qiblaBearing * math.pi) / 180,
-                                    child: Align(
-                                      alignment: Alignment.topCenter,
-                                      child: Container(
-                                        margin: const EdgeInsets.only(top: 4),
-                                        width: 34,
-                                        height: 34,
-                                        decoration: BoxDecoration(
-                                          gradient: AppColors.goldGradient,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.gold.withValues(alpha: 0.6),
-                                              blurRadius: 10,
-                                            ),
-                                          ],
-                                          border: Border.all(color: Colors.white, width: 1.5),
-                                        ),
-                                        child: const Icon(Icons.mosque, size: 18, color: Colors.black87),
-                                      ),
+                                // Inner concentric ring
+                                Container(
+                                  width: 170,
+                                  height: 170,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isFacingQibla
+                                          ? AppColors.primary.withValues(alpha: 0.4)
+                                          : cardBorder.withValues(alpha: 0.5),
+                                      width: 1,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
+                                ),
 
-                          // Center Ka'bah Direction Pointer
-                          Container(
-                            width: 54,
-                            height: 54,
-                            decoration: BoxDecoration(
-                              gradient: isFacingQibla ? AppColors.goldGradient : AppColors.emeraldGradient,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (isFacingQibla ? AppColors.gold : AppColors.primary).withValues(alpha: 0.5),
-                                  blurRadius: 12,
+                                // Rotating Qibla Needle
+                                Transform.rotate(
+                                  angle: heading != null
+                                      ? ((_qiblaBearing - heading) * (math.pi / 180.0))
+                                      : (_qiblaBearing * (math.pi / 180.0)),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      // Gold/Emerald needle pointer pointing upwards
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.navigation,
+                                            size: 58,
+                                            color: isFacingQibla ? AppColors.primaryLight : AppColors.gold,
+                                          ),
+                                          const SizedBox(height: 50),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Center Pivot Circle with Ka'ba Icon
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: isFacingQibla
+                                        ? AppColors.emeraldGradient
+                                        : AppColors.goldGradient,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.4),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Icon(Icons.mosque, color: Colors.white, size: 20),
+                                  ),
                                 ),
                               ],
-                            ),
-                            child: Icon(
-                              Icons.navigation,
-                              color: isFacingQibla ? Colors.black87 : Colors.white,
-                              size: 26,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 36),
+                    const SizedBox(height: 32),
 
-                  // Calibration note with Islamic crescent icon
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 24),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard.withValues(alpha: 0.6) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                    // --- DIGITAL ANGLE DISPLAY ---
+                    Text(
+                      '${_qiblaBearing.round()}°',
+                      style: TextStyle(
+                        fontSize: 42,
+                        fontWeight: FontWeight.bold,
+                        color: isFacingQibla ? AppColors.primaryLight : AppColors.goldLight,
+                        letterSpacing: -1,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.screen_rotation_alt, color: AppColors.gold, size: 22),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            AppTranslations.get('calibrate_compass', locale),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                              height: 1.3,
+                    const SizedBox(height: 4),
+                    Text(
+                      '${AppTranslations.get('qibla_heading_title', locale)} · $dirDesc',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF8BA69C),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // --- INSTRUCTIONS CARD ---
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: cardDark,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isFacingQibla
+                              ? AppColors.primary.withValues(alpha: 0.6)
+                              : cardBorder,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isFacingQibla ? Icons.check_circle : Icons.screen_rotation_outlined,
+                            color: isFacingQibla ? AppColors.primaryLight : AppColors.gold,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              AppTranslations.get('qibla_compass_instructions', locale),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFF1F7F4),
+                                height: 1.4,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },

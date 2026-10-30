@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/mosque_model.dart';
@@ -80,7 +81,9 @@ class MosqueRepository {
             .toList();
         if (items.isNotEmpty) return items;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Bundled mosques asset load error: $e');
+    }
     return await _loadFromCache();
   }
 
@@ -90,7 +93,9 @@ class MosqueRepository {
         _memoryAllMosques = remoteList;
         _saveToCache(remoteList);
       }
-    }).catchError((_) {});
+    }).catchError((err) {
+      debugPrint('_syncAllMosquesFromServer background sync error: $err');
+    });
   }
 
   Future<List<MosqueModel>> getNearbyMosques({
@@ -125,8 +130,8 @@ class MosqueRepository {
       if (results.isNotEmpty) {
         await _saveToCache(results);
       }
-    } catch (_) {
-      // Network failed
+    } catch (e) {
+      debugPrint('getNearbyMosques network fetch error: $e');
     }
 
     // 2. If network returned nothing (or offline), load from full Uzbekistan dataset
@@ -209,7 +214,9 @@ class MosqueRepository {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = mosques.map((m) => m.toJson()).toList();
       await prefs.setString(_cacheKey, jsonEncode(jsonList));
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('_saveToCache error: $e');
+    }
   }
 
   Future<List<MosqueModel>> _loadFromCache() async {
@@ -220,7 +227,9 @@ class MosqueRepository {
         final decoded = jsonDecode(str) as List;
         return decoded.map((item) => MosqueModel.fromJson(item)).toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('_loadFromCache error: $e');
+    }
     return [];
   }
 

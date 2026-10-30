@@ -26,6 +26,8 @@ mobile/.flutter-plugins-dependencies
 *.iml
 .vscode/
 Thumbs.db
+Desktop.ini
+desktop.ini
 
 # Root APK duplicate (release/ and backend/public/downloads/ are kept)
 /Global_Masjid_Locator.apk

@@ -55,11 +55,11 @@ class _MapWidgetState extends State<MapWidget> {
         },
       ),
       children: [
-        // Ultra-fast Global CARTO Basemaps with Official API Key (No watermarks)
+        // Fast Global CARTO Basemaps
         TileLayer(
           urlTemplate: isDark
-              ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_4d65_1_69dcf6f563a545ed10f0044e'
-              : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4d65_1_69dcf6f563a545ed10f0044e',
+              ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png'
+              : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
           subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.masjidlocator.masjid_locator',
           maxZoom: 19,

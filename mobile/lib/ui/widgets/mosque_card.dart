@@ -3,37 +3,43 @@ import '../../core/constants/app_colors.dart';
 import '../../core/l10n/app_translations.dart';
 import '../../core/utils/geo_utils.dart';
 import '../../data/models/mosque_model.dart';
-import 'amenity_chip.dart';
 import 'navigation_dialog.dart';
 
 class MosqueCard extends StatelessWidget {
   final MosqueModel mosque;
   final String locale;
   final VoidCallback onTap;
+  final VoidCallback? onMapTap;
 
   const MosqueCard({
     super.key,
     required this.mosque,
     required this.locale,
     required this.onTap,
+    this.onMapTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.darkCard : Colors.white;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+
+    final distText = mosque.distanceMeters != null
+        ? GeoUtils.formatDistance(mosque.distanceMeters!)
+        : (mosque.formattedDistance.isNotEmpty ? mosque.formattedDistance : '');
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-          width: 1.2,
-        ),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? AppColors.primary : Colors.black).withValues(alpha: isDark ? 0.25 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -42,182 +48,234 @@ class MosqueCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Row: Type & Distance
+                // Top Row: Icon, Title, Address & Distance
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Icon
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      width: 46,
+                      height: 46,
                       decoration: BoxDecoration(
-                        color: mosque.isMasjid
-                            ? AppColors.primary.withValues(alpha: 0.14)
-                            : AppColors.gold.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
+                        gradient: mosque.isMasjid ? AppColors.emeraldGradient : AppColors.goldGradient,
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: mosque.isMasjid
-                              ? AppColors.primary.withValues(alpha: 0.3)
-                              : AppColors.gold.withValues(alpha: 0.4),
-                          width: 1,
+                          color: mosque.isMasjid ? AppColors.gold : AppColors.goldLight,
+                          width: 1.2,
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            mosque.isMasjid ? Icons.mosque : Icons.meeting_room,
-                            size: 14,
-                            color: mosque.isMasjid ? AppColors.primaryLight : AppColors.gold,
+                        boxShadow: [
+                          BoxShadow(
+                            color: (mosque.isMasjid ? AppColors.primary : AppColors.gold)
+                                .withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          const SizedBox(width: 5),
+                        ],
+                      ),
+                      child: Icon(
+                        mosque.isMasjid ? Icons.mosque : Icons.meeting_room,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Title & Address
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            mosque.isMasjid
-                                ? AppTranslations.get('masjid', locale)
-                                : AppTranslations.get('musalla', locale),
+                            mosque.name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            mosque.address.isNotEmpty
+                                ? mosque.address
+                                : (mosque.city ?? ''),
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: mosque.isMasjid ? (isDark ? AppColors.primaryLight : AppColors.primary) : AppColors.gold,
+                              color: textSecondary,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    if (mosque.distanceMeters != null)
+                    // Distance Tag
+                    if (distText.isNotEmpty) ...[
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.14),
+                          color: AppColors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.35), width: 1),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.near_me, size: 12, color: isDark ? AppColors.goldLight : AppColors.goldDark),
-                            const SizedBox(width: 4),
-                            Text(
-                              GeoUtils.formatDistance(mosque.distanceMeters!),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.goldLight : AppColors.goldDark,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Mosque Name
-                Text(
-                  mosque.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                if (mosque.address.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 14,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
                         child: Text(
-                          mosque.address,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          distText,
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
 
                 const SizedBox(height: 12),
 
-                // Amenities badges
+                // Amenities Tags Row (Linear icons/tags, no raw emojis)
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
                     if (mosque.hasWuduMen)
-                      AmenityChip(
-                        icon: Icons.water_drop,
+                      _buildLinearTag(
+                        icon: Icons.water_drop_outlined,
                         label: AppTranslations.get('wudu_men', locale),
-                      ),
-                    if (mosque.hasWuduWomen)
-                      AmenityChip(
-                        icon: Icons.shower,
-                        label: AppTranslations.get('wudu_women', locale),
+                        isDark: isDark,
                       ),
                     if (mosque.hasWomenPrayerArea)
-                      AmenityChip(
+                      _buildLinearTag(
                         icon: Icons.female,
                         label: AppTranslations.get('women_section', locale),
+                        isDark: isDark,
                       ),
                     if (mosque.hasJuma)
-                      AmenityChip(
-                        icon: Icons.access_time_filled,
+                      _buildLinearTag(
+                        icon: Icons.access_time,
                         label: AppTranslations.get('juma_prayer', locale),
-                      ),
-                    if (mosque.hasWheelchairAccess)
-                      AmenityChip(
-                        icon: Icons.accessible,
-                        label: AppTranslations.get('wheelchair_access', locale),
+                        isDark: isDark,
                       ),
                     if (mosque.hasParking)
-                      AmenityChip(
+                      _buildLinearTag(
                         icon: Icons.local_parking,
                         label: AppTranslations.get('parking', locale),
+                        isDark: isDark,
                       ),
                   ],
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: borderColor),
+                const SizedBox(height: 10),
 
-                // Bottom row: Navigate Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      NavigationDialog.show(
-                        context,
-                        lat: mosque.lat,
-                        lng: mosque.lng,
-                        title: mosque.name,
-                        locale: locale,
-                      );
-                    },
-                    icon: const Icon(Icons.directions, size: 18),
-                    label: Text(AppTranslations.get('navigate', locale)),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                // Action Buttons: "Yo'nalish" and "Xarita"
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: SizedBox(
+                        height: 44, // >= 44px tap zone
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            NavigationDialog.show(
+                              context,
+                              lat: mosque.lat,
+                              lng: mosque.lng,
+                              title: mosque.name,
+                              locale: locale,
+                            );
+                          },
+                          icon: const Icon(Icons.navigation, size: 16),
+                          label: Text(
+                            AppTranslations.get('navigate_short', locale),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: SizedBox(
+                        height: 44, // >= 44px tap zone
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? AppColors.goldLight : AppColors.primary,
+                            side: BorderSide(
+                              color: isDark ? AppColors.gold.withValues(alpha: 0.5) : AppColors.primaryLight,
+                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: onMapTap ?? onTap,
+                          icon: const Icon(Icons.map_outlined, size: 16),
+                          label: Text(
+                            AppTranslations.get('map', locale),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLinearTag({
+    required IconData icon,
+    required String label,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.primaryDark.withValues(alpha: 0.35)
+            : AppColors.primarySurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark
+              ? AppColors.primaryLight.withValues(alpha: 0.25)
+              : AppColors.primary.withValues(alpha: 0.2),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 13,
+            color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

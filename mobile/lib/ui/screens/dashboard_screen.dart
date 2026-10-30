@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/l10n/app_translations.dart';
-import '../widgets/navigation_dialog.dart';
+import '../../core/utils/geo_utils.dart';
 import '../../data/models/mosque_model.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/mosque_providers.dart';
+import '../widgets/mosque_card.dart';
 import '../widgets/mosque_detail_sheet.dart';
+import '../widgets/navigation_dialog.dart';
 import '../widgets/skeleton_loader.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'add_mosque_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -21,7 +24,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   bool _isLocating = false;
-  int _cooldownRemainingMinutes = 0;
+  int _cooldownRemainingSeconds = 0;
+  Timer? _cooldownTimer;
   static const int _scanCooldownMinutes = 10;
   static const String _lastScanKey = 'last_full_scan_timestamp';
 
@@ -29,6 +33,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void initState() {
     super.initState();
     _checkCooldown();
+    // Real-time periodic timer to update countdown every 5 seconds
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _checkCooldown();
+    });
   }
 
   Future<void> _checkCooldown() async {
@@ -39,15 +47,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       final elapsed = now - lastScan;
       final cooldownMs = _scanCooldownMinutes * 60 * 1000;
       if (elapsed < cooldownMs) {
-        if (mounted) {
+        final remainingSec = ((cooldownMs - elapsed) / 1000).ceil();
+        if (mounted && _cooldownRemainingSeconds != remainingSec) {
           setState(() {
-            _cooldownRemainingMinutes = ((cooldownMs - elapsed) / 60000).ceil();
+            _cooldownRemainingSeconds = remainingSec;
           });
         }
       } else {
-        if (mounted && _cooldownRemainingMinutes > 0) {
+        if (mounted && _cooldownRemainingSeconds > 0) {
           setState(() {
-            _cooldownRemainingMinutes = 0;
+            _cooldownRemainingSeconds = 0;
           });
         }
       }
@@ -56,6 +65,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -88,12 +98,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
 
       if (isInCooldown) {
-        // Cooldown active (within 10 minutes): instant refresh from DB/cache and notify user
+        // Cooldown active: instant refresh from database
         final remainingMinutes = ((cooldownMs - elapsedMs) / 60000).ceil();
         await ref.read(mosquesListProvider.notifier).searchInCustomArea(loc);
 
         if (mounted) {
-          setState(() => _cooldownRemainingMinutes = remainingMinutes);
+          setState(() => _cooldownRemainingSeconds = ((cooldownMs - elapsedMs) / 1000).ceil());
           final count = ref.read(mosquesListProvider).value?.length ?? 0;
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -104,7 +114,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '⏱️ Yaqin masjidlar ko\'rsatildi ($count ta).\nYangi to\'liq skanerlash $remainingMinutes daqiqadan so\'ng mumkin.',
+                      '⏱️ Yaqin masjidlar yangilandi ($count ta).\nYangi to\'liq skanerlash $remainingMinutes daqiqadan so\'ng mumkin.',
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ),
@@ -116,7 +126,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           );
         }
       } else {
-        // Cooldown passed: Full scan & auto-sync new mosques into database!
+        // Cooldown passed: Full scan & auto-sync new mosques into database
         if (mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -142,7 +152,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         await prefs.setInt(_lastScanKey, now);
 
         if (mounted) {
-          setState(() => _cooldownRemainingMinutes = _scanCooldownMinutes);
+          setState(() => _cooldownRemainingSeconds = _scanCooldownMinutes * 60);
           final count = ref.read(mosquesListProvider).value?.length ?? 0;
           final newlyAdded = scanResult.newlyAddedCount;
 
@@ -156,7 +166,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Expanded(
                     child: Text(
                       newlyAdded > 0
-                          ? '✅ $count ta yaqin masjid topildi ($newlyAdded ta yangi masjid bazaga kiritildi)!'
+                          ? '✅ $count ta yaqin masjid topildi ($newlyAdded ta yangi masjid kiritildi)!'
                           : '✅ Atrofdagi $count ta yaqin masjid to\'liq yangilandi!',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
@@ -182,297 +192,218 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final mosquesAsync = ref.watch(mosquesListProvider);
     final filters = ref.watch(filtersProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
+    final remainingMins = (_cooldownRemainingSeconds / 60).ceil();
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: isDark ? AppColors.darkBg : Colors.white,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-            height: 1,
-          ),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                gradient: AppColors.emeraldGradient,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.gold, width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await _detectNearbyMosques();
+          },
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            children: [
+              // 1. TOP HEADER: "Assalomu alaykum" & "Yaqin masjidlar"
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppTranslations.get('assalomu_alaykum', locale),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        AppTranslations.get('nearby_mosques', locale),
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: textPrimary,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      // Scanner button with cooldown tooltip
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkCard : Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: _isLocating
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                )
+                              : Icon(
+                                  Icons.radar,
+                                  color: remainingMins > 0 ? Colors.grey : AppColors.primary,
+                                  size: 20,
+                                ),
+                          tooltip: remainingMins > 0
+                              ? AppTranslations.get('waiting_min', locale).replaceAll('@mins', '$remainingMins')
+                              : AppTranslations.get('scan_button', locale),
+                          onPressed: _isLocating ? null : _detectNearbyMosques,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Add Mosque button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkCard : Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.add, color: AppColors.primary, size: 22),
+                          tooltip: AppTranslations.get('add_mosque', locale),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AddMosqueScreen()),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              child: const Icon(Icons.mosque, color: AppColors.goldLight, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              AppTranslations.get('app_title', locale),
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+
+              const SizedBox(height: 16),
+
+              // 2. SEARCH BAR ("Masjid yoki manzil qidirish...")
+              _buildSearchBar(isDark, locale),
+
+              const SizedBox(height: 18),
+
+              // 3. COMPACT QUICK ACTIONS (Qibla, Xarita, Qo'shish, Sozlamalar)
+              _buildCompactQuickActions(context, locale, isDark),
+
+              const SizedBox(height: 20),
+
+              // 4. "ENG YAQIN" (Nearest Mosque) HERO CARD (PDF Page 1)
+              mosquesAsync.when(
+                data: (list) {
+                  if (list.isEmpty) return const SizedBox.shrink();
+                  final nearest = list.first;
+                  return Column(
+                    children: [
+                      _buildNearestHeroCard(context, nearest, locale),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: _isLocating
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLight),
-                  )
-                : const Icon(Icons.radar, color: AppColors.primaryLight),
-            tooltip: _cooldownRemainingMinutes > 0
-                ? 'Kutish: $_cooldownRemainingMinutes daq'
-                : 'Yaqin masjidlarni skanerlash',
-            onPressed: _isLocating ? null : _detectNearbyMosques,
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_location_alt, color: AppColors.primaryLight),
-            tooltip: AppTranslations.get('add_mosque', locale),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddMosqueScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _detectNearbyMosques();
-        },
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          children: [
-            // 1. QUICK SERVICES (4 Cards: Qibla, Map, Add Mosque, Settings)
-            Text(
-              'Asosiy Xizmatlar',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF1E293B),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _buildQuickServicesGrid(context, locale, isDark),
 
-            const SizedBox(height: 20),
+              // 5. QUICK FILTER CHIPS ("Barchasi · 24", "Masjid", "Musalla", "Ayollar uchun")
+              _buildFilterChips(filters, locale, isDark, mosquesAsync.value?.length ?? 0),
 
-            // 3. SEARCH & QUICK FILTERS
-            _buildSearchBar(isDark, locale),
-            const SizedBox(height: 10),
-            _buildFilterChips(filters, locale),
+              const SizedBox(height: 16),
 
-            const SizedBox(height: 20),
+              // 6. MOSQUES LIST CONTENT
+              mosquesAsync.when(
+                data: (list) {
+                  if (list.isEmpty) {
+                    return _buildEmptyState(isDark, locale);
+                  }
 
-            // 4. NEAREST MOSQUES FEED
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  AppTranslations.get('nearby_mosques', locale),
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
-                  ),
+                  // If nearest is featured as hero, show all items or remaining items cleanly
+                  final displayList = list.length > 1 ? list.sublist(1) : list;
+
+                  return Column(
+                    children: displayList.map((m) {
+                      return MosqueCard(
+                        mosque: m,
+                        locale: locale,
+                        onTap: () {
+                          MosqueDetailSheet.show(
+                            context,
+                            mosque: m,
+                            locale: locale,
+                            onReportSubmit: (id, reason, details) =>
+                                ref.read(mosqueRepositoryProvider).reportIssue(id, reason, details),
+                          );
+                        },
+                        onMapTap: () {
+                          ref.read(selectedMosqueProvider.notifier).state = m;
+                          ref.read(currentTabProvider.notifier).state = 1; // Map tab
+                        },
+                      );
+                    }).toList(),
+                  );
+                },
+                loading: () => Column(
+                  children: List.generate(3, (_) => const SkeletonLoader()),
                 ),
-                mosquesAsync.when(
-                  data: (list) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${list.length} ta',
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                error: (_, __) => Container(
+                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.redAccent),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          AppTranslations.get('error_network', locale),
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Mosques List Content
-            mosquesAsync.when(
-              data: (list) {
-                if (list.isEmpty) {
-                  return _buildEmptyState(isDark);
-                }
-                return Column(
-                  children: list.map((m) => _buildMosqueFeedCard(context, m, isDark, locale)).toList(),
-                );
-              },
-              loading: () => Column(
-                children: List.generate(3, (_) => const SkeletonLoader()),
               ),
-              error: (err, _) => Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text('Xatolik: $err', style: const TextStyle(color: Colors.red)),
-              ),
-            ),
 
-            const SizedBox(height: 30),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Quick Services Grid
-  Widget _buildQuickServicesGrid(BuildContext context, String locale, bool isDark) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.45,
-      children: [
-        // 1. Qibla Compass (Imperial Islamic Gold)
-        _buildServiceCard(
-          title: 'Qibla Kompasi',
-          subtitle: 'Ka\'ba tomon yo\'nalish',
-          icon: Icons.explore,
-          gradient: const [Color(0xFFB78B1E), Color(0xFFD4AF37), Color(0xFFFDE68A)],
-          borderColor: AppColors.goldLight.withValues(alpha: 0.6),
-          onTap: () {
-            ref.read(currentTabProvider.notifier).state = 2; // Switch to Qibla Tab
-          },
-        ),
-
-        // 2. Map Explorer (Royal Islamic Emerald)
-        _buildServiceCard(
-          title: 'Xarita & Navigator',
-          subtitle: 'Xaritada ko\'rish',
-          icon: Icons.map,
-          gradient: const [Color(0xFF044332), Color(0xFF065F46), Color(0xFF0D9488)],
-          borderColor: AppColors.primaryLight.withValues(alpha: 0.5),
-          onTap: () {
-            ref.read(currentTabProvider.notifier).state = 1; // Switch to Map Tab
-          },
-        ),
-
-        // 3. Add Mosque (Islamic Malachite)
-        _buildServiceCard(
-          title: 'Masjid Qo\'shish',
-          subtitle: 'Yangi joy kiritish',
-          icon: Icons.add_business,
-          gradient: const [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF10B981)],
-          borderColor: AppColors.gold.withValues(alpha: 0.4),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddMosqueScreen()),
-            );
-          },
-        ),
-
-        // 4. Settings (Ka'ba Kiswah Midnight Slate)
-        _buildServiceCard(
-          title: 'Sozlamalar',
-          subtitle: 'Til va oflayn kesh',
-          icon: Icons.settings,
-          gradient: const [Color(0xFF0B2125), Color(0xFF153940), Color(0xFF1E4B54)],
-          borderColor: isDark ? AppColors.darkCardBorder : Colors.white24,
-          onTap: () {
-            ref.read(currentTabProvider.notifier).state = 3; // Switch to Settings Tab
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildServiceCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> gradient,
-    required Color borderColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+              const SizedBox(height: 24),
+            ],
           ),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: borderColor, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.first.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: Colors.white, size: 28),
-                const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 13),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    shadows: [Shadow(color: Colors.black38, blurRadius: 4)],
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
   }
 
-  // Search Bar
+  // --- SEARCH BAR ---
   Widget _buildSearchBar(bool isDark, String locale) {
     return Container(
       decoration: BoxDecoration(
@@ -498,9 +429,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             fontSize: 13,
             color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
           ),
-          prefixIcon: const Icon(Icons.search, color: AppColors.primaryLight),
+          prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 20),
+          suffixIcon: _searchCtrl.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    ref.read(filtersProvider.notifier).setSearchQuery('');
+                  },
+                )
+              : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         ),
         onChanged: (val) {
           ref.read(filtersProvider.notifier).setSearchQuery(val.trim());
@@ -509,21 +449,244 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  // Filter Chips
-  Widget _buildFilterChips(MosqueFilters filters, String locale) {
+  // --- COMPACT QUICK ACTIONS (PDF Page 1: Qibla, Xarita, Qo'shish, Sozlamalar) ---
+  Widget _buildCompactQuickActions(BuildContext context, String locale, bool isDark) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildQuickActionItem(
+          label: AppTranslations.get('qibla', locale),
+          icon: Icons.explore_outlined,
+          color: AppColors.gold,
+          isDark: isDark,
+          onTap: () {
+            ref.read(currentTabProvider.notifier).state = 2; // Qibla tab
+          },
+        ),
+        _buildQuickActionItem(
+          label: AppTranslations.get('map', locale),
+          icon: Icons.map_outlined,
+          color: AppColors.primary,
+          isDark: isDark,
+          onTap: () {
+            ref.read(currentTabProvider.notifier).state = 1; // Map tab
+          },
+        ),
+        _buildQuickActionItem(
+          label: AppTranslations.get('add_mosque', locale),
+          icon: Icons.add_location_alt_outlined,
+          color: const Color(0xFF0D9488),
+          isDark: isDark,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddMosqueScreen()),
+            );
+          },
+        ),
+        _buildQuickActionItem(
+          label: AppTranslations.get('settings', locale),
+          icon: Icons.settings_outlined,
+          color: isDark ? AppColors.darkTextSecondary : const Color(0xFF475569),
+          isDark: isDark,
+          onTap: () {
+            ref.read(currentTabProvider.notifier).state = 3; // Settings tab
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionItem({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 52,
+            height: 52, // >= 44px tap zone
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(icon, color: color, size: 24),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- "ENG YAQIN" (Nearest Mosque) HERO CARD (PDF Page 1) ---
+  Widget _buildNearestHeroCard(BuildContext context, MosqueModel mosque, String locale) {
+    final distText = mosque.distanceMeters != null
+        ? GeoUtils.formatDistance(mosque.distanceMeters!)
+        : (mosque.formattedDistance.isNotEmpty ? mosque.formattedDistance : '');
+
+    final addressSubtitle = [
+      if (mosque.address.isNotEmpty) mosque.address,
+      if (mosque.hasWuduMen) AppTranslations.get('wudu_men', locale),
+      if (mosque.hasJuma) AppTranslations.get('juma_prayer', locale),
+    ].join(' · ');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: AppColors.emeraldGradient,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: "ENG YAQIN" badge & Distance
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  AppTranslations.get('nearest_badge', locale),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              if (distText.isNotEmpty)
+                Text(
+                  distText,
+                  style: const TextStyle(
+                    color: AppColors.goldLight,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Mosque Title
+          Text(
+            mosque.name,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          const SizedBox(height: 4),
+
+          // Subtitle / Address & Amenities
+          Text(
+            addressSubtitle.isNotEmpty ? addressSubtitle : (mosque.city ?? ''),
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.white70,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Large "Yo'nalish olish" Button (PDF Page 1)
+          SizedBox(
+            width: double.infinity,
+            height: 44, // >= 44px tap zone
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primaryDark,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                NavigationDialog.show(
+                  context,
+                  lat: mosque.lat,
+                  lng: mosque.lng,
+                  title: mosque.name,
+                  locale: locale,
+                );
+              },
+              icon: const Icon(Icons.navigation, size: 16, color: AppColors.primaryDark),
+              label: Text(
+                AppTranslations.get('navigate', locale),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- FILTER CHIPS ("Barchasi · 24", "Masjid", "Musalla", "Ayollar uchun") ---
+  Widget _buildFilterChips(MosqueFilters filters, String locale, bool isDark, int totalCount) {
+    final allLabel = totalCount > 0
+        ? '${AppTranslations.get('all', locale)} · $totalCount'
+        : AppTranslations.get('all', locale);
+
     return SizedBox(
       height: 38,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
           _buildChip(
-            label: AppTranslations.get('all', locale),
-            isSelected: filters.type == 'all',
-            onTap: () => ref.read(filtersProvider.notifier).setType('all'),
+            label: allLabel,
+            isSelected: filters.type == 'all' && !filters.hasWomenPrayerArea && !filters.hasWuduWomen,
+            isDark: isDark,
+            onTap: () => ref.read(filtersProvider.notifier).resetFilters(),
           ),
           _buildChip(
             label: AppTranslations.get('masjid', locale),
             isSelected: filters.type == 'masjid',
+            isDark: isDark,
             onTap: () => ref.read(filtersProvider.notifier).setType(
                   filters.type == 'masjid' ? 'all' : 'masjid',
                 ),
@@ -531,19 +694,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _buildChip(
             label: AppTranslations.get('musalla', locale),
             isSelected: filters.type == 'musalla',
+            isDark: isDark,
             onTap: () => ref.read(filtersProvider.notifier).setType(
                   filters.type == 'musalla' ? 'all' : 'musalla',
                 ),
           ),
           _buildChip(
-            label: '💧 ${AppTranslations.get('filter_women_wudu', locale)}',
-            isSelected: filters.hasWuduWomen,
-            onTap: () => ref.read(filtersProvider.notifier).toggleWuduWomen(),
-          ),
-          _buildChip(
-            label: '🧕 ${AppTranslations.get('filter_women_prayer', locale)}',
-            isSelected: filters.hasWomenPrayerArea,
-            onTap: () => ref.read(filtersProvider.notifier).toggleWomenPrayer(),
+            label: AppTranslations.get('women_friendly', locale),
+            isSelected: filters.hasWomenPrayerArea || filters.hasWuduWomen,
+            isDark: isDark,
+            onTap: () {
+              ref.read(filtersProvider.notifier).toggleWomenPrayer();
+              ref.read(filtersProvider.notifier).toggleWuduWomen();
+            },
           ),
         ],
       ),
@@ -553,18 +716,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildChip({
     required String label,
     required bool isSelected,
+    required bool isDark,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary
+              : (isDark ? AppColors.darkCard : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.gold : AppColors.lightCardBorder,
+            color: isSelected
+                ? AppColors.primary
+                : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
             width: isSelected ? 1.4 : 1.0,
           ),
           boxShadow: isSelected
@@ -581,7 +750,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.lightTextSecondary,
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextSecondary),
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
@@ -591,220 +762,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  // Mosque Feed Card
-  Widget _buildMosqueFeedCard(
-    BuildContext context,
-    MosqueModel mosque,
-    bool isDark,
-    String locale,
-  ) {
-    final distText = mosque.formattedDistance;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: mosque.isMasjid ? AppColors.emeraldGradient : AppColors.goldGradient,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: mosque.isMasjid ? AppColors.gold : AppColors.goldLight,
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (mosque.isMasjid ? AppColors.primary : AppColors.gold).withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  mosque.isMasjid ? Icons.mosque : Icons.meeting_room,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      mosque.name,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      mosque.address.isNotEmpty ? mosque.address : (mosque.city ?? 'Manzil ko\'rsatilmagan'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.35), width: 1),
-                ),
-                child: Text(
-                  '📍 $distText',
-                  style: TextStyle(
-                    color: isDark ? AppColors.goldLight : AppColors.goldDark,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Amenities row
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _buildTag('💧 Tahoratxona', mosque.hasWuduMen, isDark),
-              if (mosque.hasWuduWomen) _buildTag('🧕 Ayollar tahoratxonasi', true, isDark),
-              if (mosque.hasWomenPrayerArea) _buildTag('🧕 Ayollar zali', true, isDark),
-              if (mosque.hasJuma) _buildTag('🕌 Juma o\'qiladi', true, isDark),
-              if (mosque.hasParking) _buildTag('🚗 Avtoturargoh', true, isDark),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-          Divider(height: 1, color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
-          const SizedBox(height: 10),
-
-          // Actions: Borish & Xaritada ko'rish
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    elevation: 1,
-                  ),
-                  onPressed: () {
-                    NavigationDialog.show(
-                      context,
-                      lat: mosque.lat,
-                      lng: mosque.lng,
-                      title: mosque.name,
-                      locale: locale,
-                    );
-                  },
-                  icon: const Icon(Icons.navigation, size: 16),
-                  label: const Text('Borish (Navigatsiya)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: isDark ? AppColors.goldLight : AppColors.primary,
-                  side: BorderSide(
-                    color: isDark ? AppColors.gold.withValues(alpha: 0.5) : AppColors.primaryLight,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                ),
-                onPressed: () {
-                  ref.read(selectedMosqueProvider.notifier).state = mosque;
-                  ref.read(currentTabProvider.notifier).state = 1; // Switch to Map
-                },
-                icon: const Icon(Icons.map_outlined, size: 16),
-                label: const Text('Xarita', style: TextStyle(fontSize: 13)),
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.info_outline, size: 20),
-                color: AppColors.gold,
-                onPressed: () {
-                  MosqueDetailSheet.show(
-                    context,
-                    mosque: mosque,
-                    locale: locale,
-                    onReportSubmit: (id, reason, details) =>
-                        ref.read(mosqueRepositoryProvider).reportIssue(id, reason, details),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTag(String text, bool active, [bool isDark = false]) {
-    if (!active) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.primaryDark.withValues(alpha: 0.35)
-            : AppColors.primarySurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isDark
-              ? AppColors.primaryLight.withValues(alpha: 0.25)
-              : AppColors.primary.withValues(alpha: 0.2),
-          width: 0.8,
-        ),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          color: isDark ? AppColors.primaryLight : AppColors.primaryDark,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(bool isDark) {
+  Widget _buildEmptyState(bool isDark, String locale) {
     return Container(
       padding: const EdgeInsets.all(32),
       alignment: Alignment.center,
@@ -827,7 +785,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Yaqin-atrofda masjid topilmadi',
+            AppTranslations.get('no_mosques_found', locale),
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -836,7 +794,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'GPS joylashuvingizni yangilang yoki boshqa hududni skanerlang.',
+            AppTranslations.get('location_disabled_msg', locale),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -855,7 +813,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ref.read(userLocationProvider.notifier).refreshLocation();
             },
             icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Qayta qidirish', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: Text(
+              AppTranslations.get('refresh_search', locale),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/l10n/app_translations.dart';
+import '../../core/utils/geo_utils.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/mosque_providers.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/mosque_card.dart';
 import '../widgets/mosque_detail_sheet.dart';
+import '../widgets/navigation_dialog.dart';
 import '../widgets/skeleton_loader.dart';
 import 'add_mosque_screen.dart';
 import 'qibla_screen.dart';
@@ -56,9 +58,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _recenterToUser() async {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('📍 Joylashuvingiz va yaqin masjidlar aniqlanmoqda...'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Row(
+          children: const [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 10),
+            Text('📍 Joylashuv aniqlanmoqda...'),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
         backgroundColor: AppColors.primary,
       ),
     );
@@ -69,17 +81,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _mapController.move(userLoc, 15.0);
       ref.read(allMosquesProvider.notifier).resetToUserLocation();
       setState(() => _showSearchAreaButton = false);
-      if (mounted) {
-        final count = ref.read(allMosquesProvider).value?.length ?? 0;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ $count ta masjid xaritada mavjud'),
-            duration: const Duration(seconds: 2),
-            backgroundColor: const Color(0xFF059669),
-          ),
-        );
-      }
     }
   }
 
@@ -97,7 +98,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Interactive OpenStreetMap / CartoDB
+          // 1. Interactive Map
           Positioned.fill(
             child: MapWidget(
               mapController: _mapController,
@@ -108,13 +109,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               onMosqueSelected: (mosque) {
                 ref.read(selectedMosqueProvider.notifier).state = mosque;
                 _mapController.move(LatLng(mosque.lat, mosque.lng), 16.0);
-                MosqueDetailSheet.show(
-                  context,
-                  mosque: mosque,
-                  locale: locale,
-                  onReportSubmit: (id, reason, details) =>
-                      ref.read(mosqueRepositoryProvider).reportIssue(id, reason, details),
-                );
               },
               onPositionChanged: _onPositionChanged,
             ),
@@ -132,9 +126,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.darkCard : Colors.white,
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
+                          color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -189,11 +186,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         _buildFilterBadge(
                           label: AppTranslations.get('all', locale),
                           isSelected: filters.type == 'all',
+                          isDark: isDark,
                           onTap: () => ref.read(filtersProvider.notifier).setType('all'),
                         ),
                         _buildFilterBadge(
                           label: AppTranslations.get('masjid', locale),
                           isSelected: filters.type == 'masjid',
+                          isDark: isDark,
                           onTap: () => ref.read(filtersProvider.notifier).setType(
                                 filters.type == 'masjid' ? 'all' : 'masjid',
                               ),
@@ -201,30 +200,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         _buildFilterBadge(
                           label: AppTranslations.get('musalla', locale),
                           isSelected: filters.type == 'musalla',
+                          isDark: isDark,
                           onTap: () => ref.read(filtersProvider.notifier).setType(
                                 filters.type == 'musalla' ? 'all' : 'musalla',
                               ),
                         ),
                         _buildFilterBadge(
-                          label: '💧 ${AppTranslations.get('filter_women_wudu', locale)}',
-                          isSelected: filters.hasWuduWomen,
-                          onTap: () => ref.read(filtersProvider.notifier).toggleWuduWomen(),
-                        ),
-                        _buildFilterBadge(
-                          label: '🧕 ${AppTranslations.get('filter_women_prayer', locale)}',
-                          isSelected: filters.hasWomenPrayerArea,
-                          onTap: () => ref.read(filtersProvider.notifier).toggleWomenPrayer(),
+                          label: AppTranslations.get('women_friendly', locale),
+                          isSelected: filters.hasWuduWomen || filters.hasWomenPrayerArea,
+                          isDark: isDark,
+                          onTap: () {
+                            ref.read(filtersProvider.notifier).toggleWomenPrayer();
+                            ref.read(filtersProvider.notifier).toggleWuduWomen();
+                          },
                         ),
                       ],
                     ),
                   ),
 
-                  // Search this area button
+                  // "Search this area" button
                   if (_showSearchAreaButton) ...[
                     const SizedBox(height: 10),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: isDark ? AppColors.darkCard : Colors.white,
                         foregroundColor: AppColors.primary,
                         elevation: 6,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -246,12 +245,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           // 3. RIGHT FLOATING ACTION BUTTONS
           Positioned(
             right: 16,
-            top: 180,
+            top: 175,
             child: Column(
               children: [
                 _buildFloatingButton(
-                  icon: Icons.explore,
-                  color: AppColors.accentGold,
+                  icon: Icons.explore_outlined,
+                  color: isDark ? AppColors.darkCard : Colors.white,
+                  iconColor: AppColors.gold,
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -262,13 +262,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 const SizedBox(height: 12),
                 _buildFloatingButton(
                   icon: Icons.my_location,
-                  color: AppColors.darkCard,
+                  color: isDark ? AppColors.darkCard : Colors.white,
+                  iconColor: AppColors.primary,
                   onPressed: _recenterToUser,
                 ),
                 const SizedBox(height: 12),
                 _buildFloatingButton(
-                  icon: Icons.add_location_alt,
+                  icon: Icons.add,
                   color: AppColors.primary,
+                  iconColor: Colors.white,
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -280,135 +282,288 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
           ),
 
-          // 4. BOTTOM DRAGGABLE SHEET
-          DraggableScrollableSheet(
-            initialChildSize: 0.18,
-            minChildSize: 0.08,
-            maxChildSize: 0.65,
-            builder: (context, scrollController) {
-              return Container(
+          // 4. SELECTED MOSQUE BOTTOM CARD (Matches PDF Page 2)
+          if (selectedMosque != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkCard : Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+                    width: 1.2,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
+                      color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
                       blurRadius: 20,
-                      offset: const Offset(0, -4),
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
-                child: CustomScrollView(
-                  controller: scrollController,
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        children: [
-                          Center(
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 10),
-                              width: 44,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top row: Name & Distance
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                selectedMosque.name,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                selectedMosque.address.isNotEmpty
+                                    ? selectedMosque.address
+                                    : (selectedMosque.city ?? ''),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (selectedMosque.distanceMeters != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              GeoUtils.formatDistance(selectedMosque.distanceMeters!),
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  AppTranslations.get('nearby_mosques', locale),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                        ],
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          onPressed: () {
+                            ref.read(selectedMosqueProvider.notifier).state = null;
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Action buttons: "Yo'nalish olish" & "Batafsil"
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: SizedBox(
+                            height: 44,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                NavigationDialog.show(
+                                  context,
+                                  lat: selectedMosque.lat,
+                                  lng: selectedMosque.lng,
+                                  title: selectedMosque.name,
+                                  locale: locale,
+                                );
+                              },
+                              icon: const Icon(Icons.navigation, size: 16),
+                              label: Text(
+                                AppTranslations.get('navigate', locale),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: SizedBox(
+                            height: 44,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                side: BorderSide(
+                                  color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
                                 ),
-                                mosquesAsync.when(
-                                  data: (list) => Text(
-                                    '${list.length} ta',
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                MosqueDetailSheet.show(
+                                  context,
+                                  mosque: selectedMosque,
+                                  locale: locale,
+                                  onReportSubmit: (id, reason, details) =>
+                                      ref.read(mosqueRepositoryProvider).reportIssue(id, reason, details),
+                                );
+                              },
+                              child: Text(
+                                AppTranslations.get('details', locale),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            // 5. BOTTOM DRAGGABLE SHEET (When no mosque selected)
+            DraggableScrollableSheet(
+              initialChildSize: 0.16,
+              minChildSize: 0.08,
+              maxChildSize: 0.65,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkCard : Colors.white,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          children: [
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 10),
+                                width: 44,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    AppTranslations.get('nearby_mosques', locale),
                                     style: const TextStyle(
-                                      color: AppColors.primary,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  loading: () => const SizedBox.shrink(),
-                                  error: (_, __) => const SizedBox.shrink(),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(height: 16),
-                        ],
-                      ),
-                    ),
-                    mosquesAsync.when(
-                      data: (list) {
-                        if (list.isEmpty) {
-                          return SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Center(
-                                child: Text(
-                                  'Yaqin-atrofda masjid topilmadi',
-                                  style: TextStyle(color: Colors.grey.shade600),
-                                ),
+                                  mosquesAsync.when(
+                                    data: (list) => Text(
+                                      '${list.length} ta',
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    loading: () => const SizedBox.shrink(),
+                                    error: (_, __) => const SizedBox.shrink(),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        }
-                        return SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final mosque = list[index];
-                              return MosqueCard(
-                                mosque: mosque,
-                                locale: locale,
-                                onTap: () {
-                                  ref.read(selectedMosqueProvider.notifier).state = mosque;
-                                  _mapController.move(LatLng(mosque.lat, mosque.lng), 16.0);
-                                  MosqueDetailSheet.show(
-                                    context,
-                                    mosque: mosque,
-                                    locale: locale,
-                                    onReportSubmit: (id, reason, details) =>
-                                        ref.read(mosqueRepositoryProvider).reportIssue(id, reason, details),
-                                  );
-                                },
-                              );
-                            },
-                            childCount: list.length,
-                          ),
-                        );
-                      },
-                      loading: () => SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Column(
-                            children: List.generate(4, (_) => const SkeletonLoader()),
-                          ),
+                            const Divider(height: 16),
+                          ],
                         ),
                       ),
-                      error: (err, _) => SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Center(
-                            child: Text(
-                              'Xatolik: $err',
-                              style: const TextStyle(color: Colors.red),
+                      mosquesAsync.when(
+                        data: (list) {
+                          if (list.isEmpty) {
+                            return SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32),
+                                child: Center(
+                                  child: Text(
+                                    AppTranslations.get('no_mosques_found', locale),
+                                    style: TextStyle(color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final mosque = list[index];
+                                return MosqueCard(
+                                  mosque: mosque,
+                                  locale: locale,
+                                  onTap: () {
+                                    ref.read(selectedMosqueProvider.notifier).state = mosque;
+                                    _mapController.move(LatLng(mosque.lat, mosque.lng), 16.0);
+                                  },
+                                );
+                              },
+                              childCount: list.length,
+                            ),
+                          );
+                        },
+                        loading: () => SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Column(
+                              children: List.generate(4, (_) => const SkeletonLoader()),
+                            ),
+                          ),
+                        ),
+                        error: (_, __) => SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Center(
+                              child: Text(
+                                AppTranslations.get('error_network', locale),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.red),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -417,6 +572,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget _buildFilterBadge({
     required String label,
     required bool isSelected,
+    required bool isDark,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -426,19 +582,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.black.withValues(alpha: 0.5),
+          color: isSelected
+              ? AppColors.primary
+              : (isDark ? AppColors.darkCard : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.white24,
+            color: isSelected
+                ? AppColors.primary
+                : (isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder),
             width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white70,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
             fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
       ),
@@ -448,22 +617,26 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget _buildFloatingButton({
     required IconData icon,
     required Color color,
+    required Color iconColor,
     required VoidCallback onPressed,
   }) {
     return Container(
+      width: 46,
+      height: 46,
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
+        border: Border.all(color: Colors.black12, width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.white, size: 22),
+        icon: Icon(icon, color: iconColor, size: 22),
         onPressed: onPressed,
       ),
     );

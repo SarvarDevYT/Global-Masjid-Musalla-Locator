@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/mosque_model.dart';
 import '../../core/constants/api_constants.dart';
@@ -39,8 +40,12 @@ class ApiService {
           final newlyAdded = (data['newly_added_count'] as num?)?.toInt() ?? 0;
           return ScanResult(mosques: list, newlyAddedCount: newlyAdded);
         }
+      } else {
+        debugPrint('scanAndSyncNearby status: ${response.statusCode}');
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('scanAndSyncNearby network error: $e');
+    }
 
     final fallbackList = await fetchNearbyMosques(lat: lat, lng: lng, radiusMeters: radiusMeters);
     return ScanResult(mosques: fallbackList, newlyAddedCount: 0);
@@ -83,9 +88,11 @@ class ApiService {
               .toList();
           if (list.isNotEmpty) return list;
         }
+      } else {
+        debugPrint('fetchNearbyMosques non-200: ${response.statusCode}');
       }
-    } catch (_) {
-      // Backend not reached or offline: fallback to direct Overpass query
+    } catch (e) {
+      debugPrint('fetchNearbyMosques error (falling back to Overpass): $e');
     }
 
     // Direct OpenStreetMap Overpass Fallback for instant worldwide operation
@@ -98,6 +105,7 @@ class ApiService {
       if (type != null && type != 'all') 'type': type,
       'limit': '3000',
     };
+
     final uri = Uri.parse('${ApiConstants.defaultBaseUrl}/mosques/all').replace(queryParameters: queryParams);
 
     try {
@@ -110,9 +118,11 @@ class ApiService {
               .toList();
           if (list.isNotEmpty) return list;
         }
+      } else {
+        debugPrint('fetchAllMosques non-200: ${response.statusCode}');
       }
-    } catch (_) {
-      // Offline or backend not reached
+    } catch (e) {
+      debugPrint('fetchAllMosques error: $e');
     }
     return [];
   }
@@ -176,8 +186,12 @@ class ApiService {
             verifiedCount: 5,
           );
         }).toList();
+      } else {
+        debugPrint('Overpass API returned status: ${response.statusCode}');
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Overpass API query error: $e');
+    }
 
     return [];
   }
@@ -190,7 +204,8 @@ class ApiService {
         body: jsonEncode(mosqueData),
       ).timeout(const Duration(seconds: 5));
       return response.statusCode == 201;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('submitMosque error: $e');
       return false;
     }
   }
@@ -203,7 +218,8 @@ class ApiService {
         body: jsonEncode({'reason': reason, 'details': details}),
       ).timeout(const Duration(seconds: 5));
       return response.statusCode == 201;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('submitReport error: $e');
       return false;
     }
   }

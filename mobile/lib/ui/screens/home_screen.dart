@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/l10n/app_translations.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/mosque_providers.dart';
 import 'dashboard_screen.dart';
@@ -24,6 +23,33 @@ class HomeScreen extends ConsumerWidget {
       QiblaScreen(),
       SettingsScreen(),
     ];
+
+    String homeLabel = 'Bosh sahifa';
+    String mapLabel = 'Xarita';
+    String qiblaLabel = 'Qibla';
+    String settingsLabel = 'Sozlamalar';
+
+    if (locale == 'en') {
+      homeLabel = 'Home';
+      mapLabel = 'Map';
+      qiblaLabel = 'Qibla';
+      settingsLabel = 'Settings';
+    } else if (locale == 'ru') {
+      homeLabel = 'Главная';
+      mapLabel = 'Карта';
+      qiblaLabel = 'Кибла';
+      settingsLabel = 'Настройки';
+    } else if (locale == 'ar') {
+      homeLabel = 'الرئيسية';
+      mapLabel = 'الخريطة';
+      qiblaLabel = 'القبلة';
+      settingsLabel = 'الإعدادات';
+    } else if (locale == 'tr') {
+      homeLabel = 'Ana Sayfa';
+      mapLabel = 'Harita';
+      qiblaLabel = 'Kıble';
+      settingsLabel = 'Ayarlar';
+    }
 
     return Scaffold(
       body: IndexedStack(
@@ -61,22 +87,22 @@ class HomeScreen extends ConsumerWidget {
             NavigationDestination(
               icon: const Icon(Icons.home_outlined),
               selectedIcon: const Icon(Icons.mosque, color: AppColors.primary),
-              label: AppTranslations.get('all', locale) == 'Barchasi' ? 'Bosh Sahifa' : 'Home',
+              label: homeLabel,
             ),
             NavigationDestination(
               icon: const Icon(Icons.map_outlined),
               selectedIcon: const Icon(Icons.map, color: AppColors.primary),
-              label: AppTranslations.get('all', locale) == 'Barchasi' ? 'Xarita' : 'Map',
+              label: mapLabel,
             ),
             NavigationDestination(
               icon: const Icon(Icons.explore_outlined),
               selectedIcon: const Icon(Icons.explore, color: AppColors.gold),
-              label: AppTranslations.get('qibla_compass', locale).split(' ').first,
+              label: qiblaLabel,
             ),
             NavigationDestination(
               icon: const Icon(Icons.settings_outlined),
               selectedIcon: const Icon(Icons.settings, color: AppColors.primary),
-              label: AppTranslations.get('settings', locale),
+              label: settingsLabel,
             ),
           ],
         ),
